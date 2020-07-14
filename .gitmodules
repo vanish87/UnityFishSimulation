@@ -1,0 +1,3 @@
+[submodule "Assets/Packages/UnityTools"]
+	path = Assets/Packages/UnityTools
+	url = git@github.com:vanish87/UnityTools.git
