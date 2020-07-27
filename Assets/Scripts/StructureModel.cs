@@ -32,14 +32,18 @@ namespace UnityFishSimulation
             public enum Type
             {
                 Cross,
-                Muscle,
+                MuscleFront,
+                MuscleMiddle,
+                MuscleBack,
                 Normal,
             }
 
             protected Dictionary<Type, float> elasticMap = new Dictionary<Type, float>()
             {
                 {Type.Cross , 38f },
-                {Type.Muscle, 28f },
+                {Type.MuscleFront, 28f },
+                {Type.MuscleMiddle, 28f },
+                {Type.MuscleBack, 28f },
                 {Type.Normal, 30f },
             };
 
@@ -47,7 +51,6 @@ namespace UnityFishSimulation
             public float k = 0.1f;// viscosity constant
             public float l = 1;   // rest length
             public Type type = Type.Normal;
-
 
             public Spring(Type type)
             {
@@ -60,6 +63,17 @@ namespace UnityFishSimulation
                 return "1";
             }
         }
+
+
+
+        protected Dictionary<Spring.Type, Color> springColorMap = new Dictionary<Spring.Type, Color>()
+        {
+            {Spring.Type.Cross , Color.gray },
+            {Spring.Type.MuscleFront, Color.red },
+            {Spring.Type.MuscleMiddle, Color.green },
+            {Spring.Type.MuscleBack, Color.blue },
+            {Spring.Type.Normal, Color.cyan },
+        };
 
         protected Graph<MassPoint, Spring> fishGraph = new Graph<MassPoint, Spring>(23);
         [SerializeField] protected List<MassPoint> runtimeList;
@@ -99,70 +113,70 @@ namespace UnityFishSimulation
             this.AddSpring(1, 2, Spring.Type.Normal);
             this.AddSpring(1, 3, Spring.Type.Cross);
             this.AddSpring(1, 4, Spring.Type.Normal);
-            this.AddSpring(1, 5, Spring.Type.Muscle);//
+            this.AddSpring(1, 5, Spring.Type.MuscleFront);//
             this.AddSpring(1, 6, Spring.Type.Cross);
             this.AddSpring(1, 8, Spring.Type.Cross);
 
             this.AddSpring(2, 3, Spring.Type.Normal);
             this.AddSpring(2, 4, Spring.Type.Cross);
             this.AddSpring(2, 5, Spring.Type.Cross);
-            this.AddSpring(2, 6, Spring.Type.Muscle);//
+            this.AddSpring(2, 6, Spring.Type.MuscleFront);//
             this.AddSpring(2, 7, Spring.Type.Cross);
 
             this.AddSpring(3, 4, Spring.Type.Normal);
             this.AddSpring(3, 6, Spring.Type.Cross);
-            this.AddSpring(3, 7, Spring.Type.Muscle);//
+            this.AddSpring(3, 7, Spring.Type.MuscleFront);//
             this.AddSpring(3, 8, Spring.Type.Cross);
 
             this.AddSpring(4, 5, Spring.Type.Cross);
             this.AddSpring(4, 7, Spring.Type.Cross);
-            this.AddSpring(4, 8, Spring.Type.Muscle);//
+            this.AddSpring(4, 8, Spring.Type.MuscleFront);//
             //---------------------------------
 
             this.AddSpring(5, 6, Spring.Type.Normal);
             this.AddSpring(5, 7, Spring.Type.Cross);
             this.AddSpring(5, 8, Spring.Type.Normal);
-            this.AddSpring(5, 9, Spring.Type.Muscle);
+            this.AddSpring(5, 9, Spring.Type.MuscleMiddle);
             this.AddSpring(5, 10, Spring.Type.Cross);
             this.AddSpring(5, 12, Spring.Type.Cross);
 
             this.AddSpring(6, 7, Spring.Type.Normal);
             this.AddSpring(6, 8, Spring.Type.Cross);
             this.AddSpring(6, 9, Spring.Type.Cross);
-            this.AddSpring(6, 10, Spring.Type.Muscle);
+            this.AddSpring(6, 10, Spring.Type.MuscleMiddle);
             this.AddSpring(6, 11, Spring.Type.Cross);
 
             this.AddSpring(7, 8, Spring.Type.Normal);
             this.AddSpring(7, 10, Spring.Type.Cross);
-            this.AddSpring(7, 11, Spring.Type.Muscle);
+            this.AddSpring(7, 11, Spring.Type.MuscleMiddle);
             this.AddSpring(7, 12, Spring.Type.Cross);
 
             this.AddSpring(8, 9, Spring.Type.Cross);
             this.AddSpring(8, 11, Spring.Type.Cross);
-            this.AddSpring(8, 12, Spring.Type.Muscle);
+            this.AddSpring(8, 12, Spring.Type.MuscleMiddle);
             //---------------------------------
 
             this.AddSpring(9, 10, Spring.Type.Normal);
             this.AddSpring(9, 11, Spring.Type.Cross);
             this.AddSpring(9, 12, Spring.Type.Normal);
-            this.AddSpring(9, 13, Spring.Type.Muscle);
+            this.AddSpring(9, 13, Spring.Type.MuscleBack);
             this.AddSpring(9, 14, Spring.Type.Cross);
             this.AddSpring(9, 16, Spring.Type.Cross);
 
             this.AddSpring(10, 11, Spring.Type.Normal);
             this.AddSpring(10, 12, Spring.Type.Cross);
             this.AddSpring(10, 13, Spring.Type.Cross);
-            this.AddSpring(10, 14, Spring.Type.Muscle);
+            this.AddSpring(10, 14, Spring.Type.MuscleBack);
             this.AddSpring(10, 15, Spring.Type.Cross);
 
             this.AddSpring(11, 12, Spring.Type.Normal);
             this.AddSpring(11, 14, Spring.Type.Cross);
-            this.AddSpring(11, 15, Spring.Type.Muscle);
+            this.AddSpring(11, 15, Spring.Type.MuscleBack);
             this.AddSpring(11, 16, Spring.Type.Cross);
 
             this.AddSpring(12, 13, Spring.Type.Cross);
             this.AddSpring(12, 15, Spring.Type.Cross);
-            this.AddSpring(12, 16, Spring.Type.Muscle);
+            this.AddSpring(12, 16, Spring.Type.MuscleBack);
             //--------------------------------
 
             this.AddSpring(13, 14, Spring.Type.Normal);
@@ -259,9 +273,7 @@ namespace UnityFishSimulation
                         var edge = this.fishGraph.GetEdge(r, c);
                         if (edge == null) continue;
 
-                        if (edge.type == Spring.Type.Muscle) Gizmos.color = Color.red;
-                        else if (edge.type == Spring.Type.Cross) Gizmos.color = Color.blue;
-                        else Gizmos.color = Color.cyan;
+                        Gizmos.color = this.springColorMap[edge.type];
                         
                         edge.OnGizmos();
                     }

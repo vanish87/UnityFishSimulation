@@ -306,6 +306,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2120106929}
   - component: {fileID: 2120106928}
+  - component: {fileID: 2120106930}
   m_Layer: 0
   m_Name: Fish
   m_TagString: Untagged
@@ -341,3 +342,16 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2120106930
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2120106927}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27190fc8009bee5448d6e40413ad49c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fishModel: {fileID: 0}
