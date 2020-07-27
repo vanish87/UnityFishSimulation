@@ -277,7 +277,10 @@ namespace UnityFishSimulation
             {
                 var force = this.GetSpringForce(n);
                 n.force = force;
+            }
 
+            foreach(var n in this.fishGraph.Nodes)
+            {
                 n.velocity += n.force * dt;
                 n.Position += n.velocity * dt;
             }
