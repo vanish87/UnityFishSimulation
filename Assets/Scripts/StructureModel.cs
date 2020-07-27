@@ -296,7 +296,10 @@ namespace UnityFishSimulation
 
                 var e_ij = r_ij - s_ij.l;
 
-                var force_ij = s_ij.c * e_ij * math.normalize(r);
+                var u_ij = j.velocity - i.velocity;
+                var r_dot = (u_ij * r) / r_ij;
+
+                var force_ij = (((s_ij.c * e_ij) + (s_ij.k * r_dot))/ r_ij) * r;
                 ret += force_ij;
             }
 
