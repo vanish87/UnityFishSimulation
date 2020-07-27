@@ -29,9 +29,32 @@ namespace UnityFishSimulation
         [System.Serializable]
         public class Spring: Segment<MassPoint>
         {
+            public enum Type
+            {
+                Cross,
+                Muscle,
+                Normal,
+            }
+
+            protected Dictionary<Type, float> elasticMap = new Dictionary<Type, float>()
+            {
+                {Type.Cross , 38f },
+                {Type.Muscle, 28f },
+                {Type.Normal, 30f },
+            };
+
             public float c = 38;  // elasticity constant
             public float k = 0.1f;// viscosity constant
             public float l = 1;   // rest length
+            public Type type = Type.Normal;
+
+
+            public Spring(Type type)
+            {
+                this.type = type;
+                this.c = elasticMap[this.type];
+            }
+
             public override string ToString()
             {
                 return "1";
@@ -64,138 +87,138 @@ namespace UnityFishSimulation
                     this.runtimeSpringList.Add(edge);
                 }
             }
-        }
+        }        
 
         protected void InitSprings()
         {
-            this.AddSpring(0, 1, 30);
-            this.AddSpring(0, 2, 30);
-            this.AddSpring(0, 3, 30);
-            this.AddSpring(0, 4, 30);
+            this.AddSpring(0, 1, Spring.Type.Normal);
+            this.AddSpring(0, 2, Spring.Type.Normal);
+            this.AddSpring(0, 3, Spring.Type.Normal);
+            this.AddSpring(0, 4, Spring.Type.Normal);
 
-            this.AddSpring(1, 2, 30);
-            this.AddSpring(1, 3, 38);
-            this.AddSpring(1, 4, 30);
-            this.AddSpring(1, 5, 28);//
-            this.AddSpring(1, 6, 38);
-            this.AddSpring(1, 8, 38);
+            this.AddSpring(1, 2, Spring.Type.Normal);
+            this.AddSpring(1, 3, Spring.Type.Cross);
+            this.AddSpring(1, 4, Spring.Type.Normal);
+            this.AddSpring(1, 5, Spring.Type.Muscle);//
+            this.AddSpring(1, 6, Spring.Type.Cross);
+            this.AddSpring(1, 8, Spring.Type.Cross);
 
-            this.AddSpring(2, 3, 30);
-            this.AddSpring(2, 4, 38);
-            this.AddSpring(2, 5, 38);
-            this.AddSpring(2, 6, 28);//
-            this.AddSpring(2, 7, 38);
+            this.AddSpring(2, 3, Spring.Type.Normal);
+            this.AddSpring(2, 4, Spring.Type.Cross);
+            this.AddSpring(2, 5, Spring.Type.Cross);
+            this.AddSpring(2, 6, Spring.Type.Muscle);//
+            this.AddSpring(2, 7, Spring.Type.Cross);
 
-            this.AddSpring(3, 4, 30);
-            this.AddSpring(3, 6, 38);
-            this.AddSpring(3, 7, 28);//
-            this.AddSpring(3, 8, 38);
+            this.AddSpring(3, 4, Spring.Type.Normal);
+            this.AddSpring(3, 6, Spring.Type.Cross);
+            this.AddSpring(3, 7, Spring.Type.Muscle);//
+            this.AddSpring(3, 8, Spring.Type.Cross);
 
-            this.AddSpring(4, 5, 38);
-            this.AddSpring(4, 7, 38);
-            this.AddSpring(4, 8, 28);//
+            this.AddSpring(4, 5, Spring.Type.Cross);
+            this.AddSpring(4, 7, Spring.Type.Cross);
+            this.AddSpring(4, 8, Spring.Type.Muscle);//
             //---------------------------------
 
-            this.AddSpring(5, 6, 30);
-            this.AddSpring(5, 7, 38);
-            this.AddSpring(5, 8, 30);
-            this.AddSpring(5, 9, 28);
-            this.AddSpring(5, 10, 38);
-            this.AddSpring(5, 12, 38);
+            this.AddSpring(5, 6, Spring.Type.Normal);
+            this.AddSpring(5, 7, Spring.Type.Cross);
+            this.AddSpring(5, 8, Spring.Type.Normal);
+            this.AddSpring(5, 9, Spring.Type.Muscle);
+            this.AddSpring(5, 10, Spring.Type.Cross);
+            this.AddSpring(5, 12, Spring.Type.Cross);
 
-            this.AddSpring(6, 7, 30);
-            this.AddSpring(6, 8, 38);
-            this.AddSpring(6, 9, 38);
-            this.AddSpring(6, 10, 28);
-            this.AddSpring(6, 11, 38);
+            this.AddSpring(6, 7, Spring.Type.Normal);
+            this.AddSpring(6, 8, Spring.Type.Cross);
+            this.AddSpring(6, 9, Spring.Type.Cross);
+            this.AddSpring(6, 10, Spring.Type.Muscle);
+            this.AddSpring(6, 11, Spring.Type.Cross);
 
-            this.AddSpring(7, 8, 30);
-            this.AddSpring(7, 10, 38);
-            this.AddSpring(7, 11, 28);
-            this.AddSpring(7, 12, 38);
+            this.AddSpring(7, 8, Spring.Type.Normal);
+            this.AddSpring(7, 10, Spring.Type.Cross);
+            this.AddSpring(7, 11, Spring.Type.Muscle);
+            this.AddSpring(7, 12, Spring.Type.Cross);
 
-            this.AddSpring(8, 9, 38);
-            this.AddSpring(8, 11, 38);
-            this.AddSpring(8, 12, 28);
+            this.AddSpring(8, 9, Spring.Type.Cross);
+            this.AddSpring(8, 11, Spring.Type.Cross);
+            this.AddSpring(8, 12, Spring.Type.Muscle);
             //---------------------------------
 
-            this.AddSpring(9, 10, 30);
-            this.AddSpring(9, 11, 38);
-            this.AddSpring(9, 12, 30);
-            this.AddSpring(9, 13, 28);
-            this.AddSpring(9, 14, 38);
-            this.AddSpring(9, 16, 38);
+            this.AddSpring(9, 10, Spring.Type.Normal);
+            this.AddSpring(9, 11, Spring.Type.Cross);
+            this.AddSpring(9, 12, Spring.Type.Normal);
+            this.AddSpring(9, 13, Spring.Type.Muscle);
+            this.AddSpring(9, 14, Spring.Type.Cross);
+            this.AddSpring(9, 16, Spring.Type.Cross);
 
-            this.AddSpring(10, 11, 30);
-            this.AddSpring(10, 12, 38);
-            this.AddSpring(10, 13, 38);
-            this.AddSpring(10, 14, 28);
-            this.AddSpring(10, 15, 38);
+            this.AddSpring(10, 11, Spring.Type.Normal);
+            this.AddSpring(10, 12, Spring.Type.Cross);
+            this.AddSpring(10, 13, Spring.Type.Cross);
+            this.AddSpring(10, 14, Spring.Type.Muscle);
+            this.AddSpring(10, 15, Spring.Type.Cross);
 
-            this.AddSpring(11, 12, 30);
-            this.AddSpring(11, 14, 38);
-            this.AddSpring(11, 15, 28);
-            this.AddSpring(11, 16, 38);
+            this.AddSpring(11, 12, Spring.Type.Normal);
+            this.AddSpring(11, 14, Spring.Type.Cross);
+            this.AddSpring(11, 15, Spring.Type.Muscle);
+            this.AddSpring(11, 16, Spring.Type.Cross);
 
-            this.AddSpring(12, 13, 38);
-            this.AddSpring(12, 15, 38);
-            this.AddSpring(12, 16, 28);
+            this.AddSpring(12, 13, Spring.Type.Cross);
+            this.AddSpring(12, 15, Spring.Type.Cross);
+            this.AddSpring(12, 16, Spring.Type.Muscle);
             //--------------------------------
 
-            this.AddSpring(13, 14, 30);
-            this.AddSpring(13, 15, 38);
-            this.AddSpring(13, 16, 30);
-            this.AddSpring(13, 17, 30);
-            this.AddSpring(13, 18, 38);
-            this.AddSpring(13, 20, 38);
+            this.AddSpring(13, 14, Spring.Type.Normal);
+            this.AddSpring(13, 15, Spring.Type.Cross);
+            this.AddSpring(13, 16, Spring.Type.Normal);
+            this.AddSpring(13, 17, Spring.Type.Normal);
+            this.AddSpring(13, 18, Spring.Type.Cross);
+            this.AddSpring(13, 20, Spring.Type.Cross);
 
-            this.AddSpring(14, 15, 30);
-            this.AddSpring(14, 16, 38);
-            this.AddSpring(14, 17, 38);
-            this.AddSpring(14, 18, 30);
-            this.AddSpring(14, 19, 38);
+            this.AddSpring(14, 15, Spring.Type.Normal);
+            this.AddSpring(14, 16, Spring.Type.Cross);
+            this.AddSpring(14, 17, Spring.Type.Cross);
+            this.AddSpring(14, 18, Spring.Type.Normal);
+            this.AddSpring(14, 19, Spring.Type.Cross);
 
-            this.AddSpring(15, 16, 30);
-            this.AddSpring(15, 18, 38);
-            this.AddSpring(15, 19, 30);
-            this.AddSpring(15, 20, 38);
+            this.AddSpring(15, 16, Spring.Type.Normal);
+            this.AddSpring(15, 18, Spring.Type.Cross);
+            this.AddSpring(15, 19, Spring.Type.Normal);
+            this.AddSpring(15, 20, Spring.Type.Cross);
 
-            this.AddSpring(16, 17, 38);
-            this.AddSpring(16, 19, 38);
-            this.AddSpring(16, 20, 30);
+            this.AddSpring(16, 17, Spring.Type.Cross);
+            this.AddSpring(16, 19, Spring.Type.Cross);
+            this.AddSpring(16, 20, Spring.Type.Normal);
             //---------------------------------
 
-            this.AddSpring(17, 18, 30);
-            this.AddSpring(17, 19, 38);
-            this.AddSpring(17, 20, 30);
-            this.AddSpring(17, 21, 30);
-            this.AddSpring(17, 22, 38);
+            this.AddSpring(17, 18, Spring.Type.Normal);
+            this.AddSpring(17, 19, Spring.Type.Cross);
+            this.AddSpring(17, 20, Spring.Type.Normal);
+            this.AddSpring(17, 21, Spring.Type.Normal);
+            this.AddSpring(17, 22, Spring.Type.Cross);
 
-            this.AddSpring(18, 19, 30);
-            this.AddSpring(18, 20, 38);
-            this.AddSpring(18, 21, 30);
-            this.AddSpring(18, 22, 38);
+            this.AddSpring(18, 19, Spring.Type.Normal);
+            this.AddSpring(18, 20, Spring.Type.Cross);
+            this.AddSpring(18, 21, Spring.Type.Normal);
+            this.AddSpring(18, 22, Spring.Type.Cross);
 
-            this.AddSpring(19, 20, 30);
-            this.AddSpring(19, 21, 38);
-            this.AddSpring(19, 22, 30);
+            this.AddSpring(19, 20, Spring.Type.Normal);
+            this.AddSpring(19, 21, Spring.Type.Cross);
+            this.AddSpring(19, 22, Spring.Type.Normal);
 
-            this.AddSpring(20, 21, 38);
-            this.AddSpring(20, 22, 30);
+            this.AddSpring(20, 21, Spring.Type.Cross);
+            this.AddSpring(20, 22, Spring.Type.Normal);
 
-            this.AddSpring(21, 22, 30);
+            this.AddSpring(21, 22, Spring.Type.Normal);
 
         }
-        protected void AddSpring(int from, int to, float c = 30f, float k = 0.1f)
+
+        protected void AddSpring(int from, int to, Spring.Type type, float k = 0.1f)
         {
             var nodes = this.fishGraph.Nodes.ToList();
-            var s = new Spring();
+            var s = new Spring(type);
             s.Left = nodes[from];
             s.Right = nodes[to];
 
-            s.c = c;
             s.k = k;
-            s.l = math.length(nodes[from].Position-nodes[to].Position);
+            s.l = math.length(nodes[from].Position - nodes[to].Position);
 
             this.fishGraph.AddEdge(from, to, s);
         }
@@ -236,8 +259,8 @@ namespace UnityFishSimulation
                         var edge = this.fishGraph.GetEdge(r, c);
                         if (edge == null) continue;
 
-                        if (edge.c == 28) Gizmos.color = Color.red;
-                        else if (edge.c == 38) Gizmos.color = Color.blue;
+                        if (edge.type == Spring.Type.Muscle) Gizmos.color = Color.red;
+                        else if (edge.type == Spring.Type.Cross) Gizmos.color = Color.blue;
                         else Gizmos.color = Color.cyan;
                         
                         edge.OnGizmos();
