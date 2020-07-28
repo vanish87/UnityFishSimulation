@@ -14,11 +14,10 @@ namespace UnityFishSimulation
     #endif
     public class StructureModel : MonoBehaviour
     {
-        [Range(0.1f, 20)] public float massScale = 1f;
         [System.Serializable]
         public class MassPoint : Point, INode
         {
-            public int id;
+            [SerializeField] protected int id;
             [SerializeField] protected float mass;
 
             //runtime
@@ -125,8 +124,6 @@ namespace UnityFishSimulation
                 }
             }
 
-            float3 vproj;
-
             public void ApplyForceToNode(float mu = 1)
             {
                 var area = this.CalArea();
@@ -139,9 +136,7 @@ namespace UnityFishSimulation
 
                 var anlge = math.dot(n, math.normalize(force));
                 if (anlge > 0) force = 0;
-
-                vproj = (math.dot(n, v) * n);
-
+                
                 var num = this.nodeList.Count;
                 force /= num;
 
@@ -202,7 +197,6 @@ namespace UnityFishSimulation
         }
 
 
-
         protected Dictionary<Spring.Type, Color> springColorMap = new Dictionary<Spring.Type, Color>()
         {
             {Spring.Type.Cross , Color.gray },
@@ -212,12 +206,15 @@ namespace UnityFishSimulation
             {Spring.Type.Normal, Color.cyan },
         };
 
+        [SerializeField, Range(0.01f, 1)] protected float fluidForceSclae = 0.5f;
         protected Graph<MassPoint, Spring> fishGraph = new Graph<MassPoint, Spring>(23);
         [SerializeField] protected List<NormalFace> normals = new List<NormalFace>();
 
         [SerializeField] protected List<MassPoint> runtimeList;
         [SerializeField] protected List<Spring> runtimeMuscleList;
         [SerializeField] protected List<Spring> runtimeSpringList;
+
+        protected float3 totalForce;
 
         public List<Spring> GetSpringByType(Spring.Type type)
         {
@@ -459,7 +456,7 @@ namespace UnityFishSimulation
                 //this.runtimeList = this.fishGraph.Nodes.ToList();
             }
 
-            if(Input.GetKey(KeyCode.G))
+            //if(Input.GetKey(KeyCode.G))
             {
                 this.Step();
             }
@@ -501,28 +498,29 @@ namespace UnityFishSimulation
 
             foreach (var n in this.normals) n.OnGizmos(200 * Unit.WorldMMToUnityUnit);
 
-            Gizmos.DrawLine(Vector3.zero, this.total);
+            Gizmos.DrawLine(Vector3.zero, this.totalForce);
         }
-
-        float3 total;
         protected void Step()
         {
-            var dt = 0.01f;
-            foreach(var n in this.fishGraph.Nodes)
+            foreach (var value in Enumerable.Range(1, 10))
             {
-                var force = this.GetSpringForce(n);
-                n.force = force;
-            }
+                var dt = 0.005f;
+                foreach (var n in this.fishGraph.Nodes)
+                {
+                    var force = this.GetSpringForce(n);
+                    n.force = force;
+                }
 
-            this.ApplyFluidForce();
+                this.ApplyFluidForce();
 
-            total = 0;
-            foreach (var n in this.fishGraph.Nodes)
-            {
-                n.velocity += (n.force / n.Mass*massScale) * dt;
-                n.Position += n.velocity * dt;
+                this.totalForce = 0;
+                foreach (var n in this.fishGraph.Nodes)
+                {
+                    n.velocity += (n.force / n.Mass) * dt;
+                    n.Position += n.velocity * dt;
 
-                total += n.force;
+                    this.totalForce += n.force;
+                }
             }
         }
 
@@ -614,13 +612,10 @@ namespace UnityFishSimulation
 
             this.Print(X_dot, "X_Velocity", true);
 
-
             foreach (var n in this.fishGraph.Nodes)
             {
                 n.velocity = X_dot[n.Index,0];
                 n.Position += n.velocity * dt;
-
-                total += n.force;
             }
 
         }
@@ -727,13 +722,12 @@ namespace UnityFishSimulation
             return ret;
         }
 
-        [SerializeField, Range(0.01f, 1)] protected float forceSclae = 0.5f;
 
         protected void ApplyFluidForce()
         {
             foreach(var face in this.normals)
             {
-                face.ApplyForceToNode(forceSclae);
+                face.ApplyForceToNode(this.fluidForceSclae);
             }
         }
 

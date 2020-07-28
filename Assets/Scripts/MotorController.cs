@@ -109,6 +109,8 @@ namespace UnityFishSimulation
         [SerializeField] protected float minTemperature = 0.0001f;
         [SerializeField] protected float alpha = 0.98f;
 
+        [SerializeField, Range(0.5f, 10)] protected float phaseScale = 0.5f;
+
         protected void Start()
         {
             var num = 3;// 12;
@@ -122,6 +124,7 @@ namespace UnityFishSimulation
                 this.activations.Add(new MuscleActuatorControlFunction(start, this.h, this.sampleSize));
             }
 
+            this.testX = 60f * Mathf.Deg2Rad;
         }
 
         protected void Update()
@@ -148,7 +151,7 @@ namespace UnityFishSimulation
             var phase = 2 * math.PI;
             //var phase = timeInterval.y - timeInterval.x;
 
-            this.testX += Time.deltaTime * 0.05f;
+            this.testX += Time.deltaTime * phaseScale;
             this.testX %= phase;
 
             var t = this.testX;
