@@ -131,7 +131,7 @@ namespace UnityFishSimulation
                 this.StepSimulatedAnnealing();
             }
 
-            if(Input.GetKey(KeyCode.M))
+            //if(Input.GetKey(KeyCode.M))
             {
                 this.ApplyToMuscle();
             }
@@ -145,22 +145,27 @@ namespace UnityFishSimulation
             var activation = this.activations[0];
 
 
-            this.testX += 0.005f;
-            this.testX %= this.timeInterval.y;
+            var phase = 2 * math.PI;
+            //var phase = timeInterval.y - timeInterval.x;
+
+            this.testX += Time.deltaTime * 0.05f;
+            this.testX %= phase;
 
             var t = this.testX;
-            t = (t + (type == StructureModel.Spring.Type.MuscleBack ? math.PI : 0)) % this.timeInterval.y;
+            t = (t + (type == StructureModel.Spring.Type.MuscleBack ? math.PI : 0)) % phase;
 
+
+            var cos = 1 - (math.cos(t) + 1) * 0.5f;
 
             foreach (var l in muscleLeft)
             {
-                //l.activation = (math.sin(t) + 1) * 0.5f;// 
-                l.activation = activation.Evaluate(t, this.timeInterval);
+                l.activation = math.lerp(l.activation, cos, 0.3f);// 
+                //l.activation = activation.Evaluate(t, this.timeInterval);
             }
             foreach (var r in muscleRight)
             {
-                //r.activation = 1 - (math.sin(t) + 1) * 0.5f;// 
-                r.activation = 1 - activation.Evaluate(t, this.timeInterval);
+                r.activation = math.lerp(r.activation, 1-cos, 0.3f);// 
+                //r.activation = 1 - activation.Evaluate(t, this.timeInterval);
             }
 
         }

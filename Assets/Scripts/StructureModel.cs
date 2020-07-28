@@ -14,17 +14,19 @@ namespace UnityFishSimulation
     #endif
     public class StructureModel : MonoBehaviour
     {
+        [Range(0.1f, 20)] public float massScale = 1f;
         [System.Serializable]
         public class MassPoint : Point, INode
         {
             public int id;
-            public float mass;
+            [SerializeField] protected float mass;
 
             //runtime
             public float3 force;
             public float3 velocity;
 
             public int Index { get => this.id; set => this.id = value; }
+            public float Mass { get => this.mass; }
         }
 
         [System.Serializable]
@@ -99,6 +101,8 @@ namespace UnityFishSimulation
                 this.nodeList.Add(p3);
                 if (p4 != null) this.nodeList.Add(p4);
             }
+
+            float3 force;
             public void OnGizmos(float length = 1)
             {
                 var p1 = this.nodeList[0].Position;
@@ -108,22 +112,41 @@ namespace UnityFishSimulation
                 var mid = (p1+p2+p3+p4)/ this.nodeList.Count;
                 using (new GizmosScope(Color.yellow, Matrix4x4.identity))
                 {
-                    Gizmos.DrawLine(mid, mid + this.Normal * length);
+                    //Gizmos.DrawLine(mid, mid + this.Normal * length);
+                }
+                using (new GizmosScope(Color.red, Matrix4x4.identity))
+                {
+                    Gizmos.DrawLine(mid, mid + this.force * length);
+                }
+
+                using (new GizmosScope(Color.red, Matrix4x4.identity))
+                {
+                    //Gizmos.DrawLine(mid, mid + this.vproj * length);
                 }
             }
+
+            float3 vproj;
 
             public void ApplyForceToNode(float mu = 1)
             {
                 var area = this.CalArea();
                 var velocity = this.CalVelocity();
+                var waterVelocity = float3.zero;
+                var v = velocity - waterVelocity;
                 var n = this.Normal;
-                var force = -mu * area * math.length(velocity) * (math.dot(n, velocity) * n);
-                force = math.min(0, force);
+                var force = -mu * area * math.length(v) * (math.dot(n, v) * n);
+                //force = math.min(0, force);
+
+                var anlge = math.dot(n, math.normalize(force));
+                if (anlge > 0) force = 0;
+
+                vproj = (math.dot(n, v) * n);
 
                 var num = this.nodeList.Count;
                 force /= num;
 
-                foreach(var node in this.nodeList)
+                this.force = force;
+                foreach (var node in this.nodeList)
                 {
                     node.force += force;
                 }
@@ -146,7 +169,7 @@ namespace UnityFishSimulation
                 var v2 = p3 - p1;
                 var cos = math.dot(math.normalize(v1), math.normalize(v2));
                 var sin = math.sqrt(1 - cos * cos);
-                return math.length(v1) * math.length(v2) * sin;
+                return 0.5f * math.length(v1) * math.length(v2) * sin;
             }
 
             protected float CalArea()
@@ -242,14 +265,16 @@ namespace UnityFishSimulation
             this.runtimeMuscleList.AddRange(this.GetSpringByType(Spring.Type.MuscleFront));
 
             this.InitNormals();
+
         }        
 
         protected void InitNormals()
         {
+/*
             this.AddNormalFace(0, 1, 2);
             this.AddNormalFace(0, 2, 3);
             this.AddNormalFace(0, 3, 4);
-            this.AddNormalFace(0, 4, 1);
+            this.AddNormalFace(0, 4, 1);*/
 
             this.AddNormalFace(1, 5, 6, 2);
             this.AddNormalFace(2, 6, 7, 3);
@@ -414,7 +439,9 @@ namespace UnityFishSimulation
 
             s.k = k;
             s.lr = math.length(nodes[from].Position - nodes[to].Position);
-            s.lc = s.lr * 0.6f;
+            s.lc = s.lr * 0.5f;
+
+            if (type == Spring.Type.MuscleBack) s.lc = s.lr * 0.3f;
 
             this.fishGraph.AddEdge(from, to, s);
         }
@@ -432,9 +459,14 @@ namespace UnityFishSimulation
                 //this.runtimeList = this.fishGraph.Nodes.ToList();
             }
 
-            //if(Input.GetKey(KeyCode.G))
+            if(Input.GetKey(KeyCode.G))
             {
                 this.Step();
+            }
+
+            if (Input.GetKey(KeyCode.P))
+            {
+                this.StepMartix();
             }
         }
 
@@ -462,13 +494,20 @@ namespace UnityFishSimulation
                 }
             }
             foreach (var n in this.fishGraph.Nodes) n.OnGizmos(50 * Unit.WorldMMToUnityUnit);
+            foreach (var n in this.fishGraph.Nodes)
+            {
+                Gizmos.DrawLine(n.Position, n.Position + n.velocity);
+            }
 
             foreach (var n in this.normals) n.OnGizmos(200 * Unit.WorldMMToUnityUnit);
+
+            Gizmos.DrawLine(Vector3.zero, this.total);
         }
 
+        float3 total;
         protected void Step()
         {
-            var dt = 0.005f;
+            var dt = 0.01f;
             foreach(var n in this.fishGraph.Nodes)
             {
                 var force = this.GetSpringForce(n);
@@ -477,11 +516,192 @@ namespace UnityFishSimulation
 
             this.ApplyFluidForce();
 
+            total = 0;
             foreach (var n in this.fishGraph.Nodes)
             {
-                n.velocity += n.force * dt;
+                n.velocity += (n.force / n.Mass*massScale) * dt;
                 n.Position += n.velocity * dt;
+
+                total += n.force;
             }
+        }
+
+        protected void StepMartix()
+        {
+            foreach (var n in this.fishGraph.Nodes)
+            {
+                n.force = 0;
+            }
+            this.ApplyFluidForce();
+
+
+            var dt = 0.055f;
+            var na = 7;
+
+            var dim = this.fishGraph.AdjMatrix.Size;
+            var nodes = this.fishGraph.Nodes.ToList();
+
+            var At = new Matrix<float3>(dim.x, dim.y);
+            var Gt = new Matrix<float3>(dim.x, 1);
+
+            for (var i = 0; i < dim.x; ++i)
+            {
+                for (var j = i+1; j < dim.y; ++j)
+                {
+                    var s_ij = this.fishGraph.GetEdge(i, j);
+                    if (s_ij == null)
+                    {
+                        At[i, j] = 0;
+                    }
+                    else
+                    {
+                        Assert.IsNotNull(s_ij);
+
+                        var ni = s_ij.Left;
+                        var nj = s_ij.Right;
+
+                        var n_ij = GetN(ni, nj, s_ij.c, s_ij.k, s_ij.CurrentL);
+                        var r_ij = nj.Position - ni.Position;
+
+                        At[i, i] = At[i, i] + n_ij * dt;
+                        At[j, j] = At[j, j] + n_ij * dt;
+
+                        At[i, j] = At[j, i] = -n_ij * dt;
+
+                        Gt[i, 0] = Gt[i, 0] + n_ij * r_ij;
+                        Gt[j, 0] = Gt[j, 0] - n_ij * r_ij;
+                    }
+                }
+            }
+
+            for (var i = 0; i < nodes.Count; ++i)
+            {
+                var mi = nodes[i].Mass;
+                var fi = nodes[i].force;
+                var vi = nodes[i].velocity;
+                At[i, i] = At[i, i] + mi / dt;
+                Gt[i, 0] = Gt[i, 0] + fi + (mi / dt) * vi;
+            }
+
+
+            var L = new Matrix<float3>(dim.x, dim.y);
+            var D = new Matrix<float3>(dim.x, dim.y);
+            var LT = new Matrix<float3>(dim.x, dim.y);
+            for (var i = 0; i < dim.x; ++i)
+            {
+                for (var j = 0; j < dim.y; ++j)
+                {
+                    if (i > j) L[i, j] = At[i, j];
+                    else if (i == j) D[i, j] = At[i, j];
+                    else if (i < j) LT[i, j] = At[i, j];
+                }
+            }
+
+            //this.Print(L, "L", true);
+            //this.Print(D, "D", true);
+            //this.Print(LT, "LT", true);
+
+            var Q = this.SolverFS(L, Gt, D);
+            this.Print(Q, "Q", true);
+            //D-1Q
+            for (var i = 0; i < dim.x; ++i)
+            {
+                Q[i, 0] *= 1f / D[i, i];
+            }
+            this.Print(Q, "Q_1", true);
+
+            var X_dot = SolverBS(LT, Q, D);
+
+            this.Print(X_dot, "X_Velocity", true);
+
+
+            foreach (var n in this.fishGraph.Nodes)
+            {
+                n.velocity = X_dot[n.Index,0];
+                n.Position += n.velocity * dt;
+
+                total += n.force;
+            }
+
+        }
+        protected Matrix<float3> SolverFS(Matrix<float3> L, Matrix<float3> b, Matrix<float3> D)
+        {
+            var dim = L.Size;
+            Assert.IsTrue(dim.x == b.Size.x);
+
+            var x = new Matrix<float3>(dim.x, 1);
+
+            var m = dim.x;
+            for (var i = 0; i < m; ++i)
+            {
+                x[i, 0] = b[i, 0];
+                for (var j = 0; j < m - 1; ++j)
+                {
+                    x[i, 0] -= L[i, j] * x[j, 0];
+                }
+                x[i, 0] /= D[i, i];
+            }
+
+            return x;
+        }
+        protected Matrix<float3> SolverBS(Matrix<float3> LU, Matrix<float3> b, Matrix<float3> D)
+        {
+            var dim = LU.Size;
+            Assert.IsTrue(dim.x == b.Size.x);
+
+            var x = new Matrix<float3>(dim.x, 1);
+
+            var n = dim.x;
+            for(var i = 0; i < n; ++i)
+            {
+                x[i, 0] = b[i, 0];
+                for(var j = i; j < n-1; ++j)
+                {
+                    x[i, 0] -= LU[i, j] * x[j, 0]; 
+                }
+                x[i, 0] /= D[i, i];
+            }
+
+            return x;
+        }
+
+        void Print(Matrix<float3> mat, string name, bool value = false)
+        {
+            var dim = mat.Size;
+
+            var csv = "";
+            for (var i = 0; i < dim.x; ++i)
+            {
+                for (var j = 0; j < dim.y; ++j)
+                {
+                    var num = (math.length(mat[i, j]) != 0) ? (value ? mat[i, j].ToString():"1") : " ";
+                    //if (i > j) num = " ";
+                    csv += num + ",";
+                }
+                csv += "\n";
+            }
+
+            var path = System.IO.Path.Combine(Application.streamingAssetsPath, name+".csv");
+            System.IO.File.WriteAllText(path, csv);
+        }
+
+        /*protected float3 GetB( i)
+        {
+            var B = i.
+        }*/
+        protected float3 GetN(MassPoint i, MassPoint j, float c, float k, float l)
+        {
+            var r = j.Position - i.Position;
+            var r_ij = math.length(r);
+
+            var e_ij = r_ij - l;
+
+            var u_ij = j.velocity - i.velocity;
+            var r_dot = (u_ij * r) / r_ij;
+
+            var n_ij = (((c * e_ij) + (k * r_dot)) / r_ij) * r;
+
+            return n_ij;
         }
         protected float3 GetSpringForce(MassPoint i)
         {
@@ -507,11 +727,13 @@ namespace UnityFishSimulation
             return ret;
         }
 
+        [SerializeField, Range(0.01f, 1)] protected float forceSclae = 0.5f;
+
         protected void ApplyFluidForce()
         {
             foreach(var face in this.normals)
             {
-                face.ApplyForceToNode();
+                face.ApplyForceToNode(forceSclae);
             }
         }
 

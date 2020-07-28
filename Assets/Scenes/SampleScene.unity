@@ -326,8 +326,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c22bc69dbe2917b43af29f904cbdf1d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  massScale: 1
+  normals: []
   runtimeList: []
+  runtimeMuscleList: []
   runtimeSpringList: []
+  forceSclae: 1
 --- !u!4 &2120106929
 Transform:
   m_ObjectHideFlags: 0
