@@ -5,6 +5,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityTools.Common;
+using UnityTools.Debuging;
 using UnityTools.Debuging.EditorTool;
 
 namespace UnityFishSimulation
@@ -456,14 +457,15 @@ namespace UnityFishSimulation
                 //this.runtimeList = this.fishGraph.Nodes.ToList();
             }
 
-            //if(Input.GetKey(KeyCode.G))
+            if(Input.GetKey(KeyCode.G))
             {
                 this.Step();
             }
 
             if (Input.GetKey(KeyCode.P))
             {
-                this.StepMartix();
+                foreach (var value in Enumerable.Range(1, 500))
+                    this.StepMartix();
             }
         }
 
@@ -549,7 +551,7 @@ namespace UnityFishSimulation
                     var s_ij = this.fishGraph.GetEdge(i, j);
                     if (s_ij == null)
                     {
-                        At[i, j] = 0;
+                        continue;
                     }
                     else
                     {
@@ -589,9 +591,9 @@ namespace UnityFishSimulation
             {
                 for (var j = 0; j < dim.y; ++j)
                 {
-                    if (i > j) L[i, j] = At[i, j];
-                    else if (i == j) D[i, j] = At[i, j];
-                    else if (i < j) LT[i, j] = At[i, j];
+                    if (i >= j) L[i, j] = At[i, j];
+                    if (i == j) D[i, j] = At[i, j];
+                    if (i <= j) LT[i, j] = At[i, j];
                 }
             }
 
@@ -599,18 +601,18 @@ namespace UnityFishSimulation
             //this.Print(D, "D", true);
             //this.Print(LT, "LT", true);
 
-            var Q = this.SolverFS(L, Gt, D);
-            this.Print(Q, "Q", true);
+            var Q = this.SolverFS(L, Gt);
+            //this.Print(Q, "Q", true);
             //D-1Q
             for (var i = 0; i < dim.x; ++i)
             {
                 Q[i, 0] *= 1f / D[i, i];
             }
-            this.Print(Q, "Q_1", true);
+            //this.Print(Q, "Q_1", true);
 
-            var X_dot = SolverBS(LT, Q, D);
+            var X_dot = SolverBS(LT, Q);
 
-            this.Print(X_dot, "X_Velocity", true);
+            //this.Print(X_dot, "X_Velocity", true);
 
             foreach (var n in this.fishGraph.Nodes)
             {
@@ -619,42 +621,44 @@ namespace UnityFishSimulation
             }
 
         }
-        protected Matrix<float3> SolverFS(Matrix<float3> L, Matrix<float3> b, Matrix<float3> D)
+        protected Matrix<float3> SolverFS(Matrix<float3> L, Matrix<float3> b)
         {
             var dim = L.Size;
             Assert.IsTrue(dim.x == b.Size.x);
 
-            var x = new Matrix<float3>(dim.x, 1);
+            //Ly = b
+            var y = new Matrix<float3>(dim.x, 1);
 
             var m = dim.x;
             for (var i = 0; i < m; ++i)
             {
-                x[i, 0] = b[i, 0];
+                var sum = float3.zero;
                 for (var j = 0; j < m - 1; ++j)
                 {
-                    x[i, 0] -= L[i, j] * x[j, 0];
+                    sum += L[i, j] * y[j, 0];
                 }
-                x[i, 0] /= D[i, i];
+                y[i, 0] = (b[i, 0] + sum) / L[i, i];
             }
 
-            return x;
+            return y;
         }
-        protected Matrix<float3> SolverBS(Matrix<float3> LU, Matrix<float3> b, Matrix<float3> D)
+        protected Matrix<float3> SolverBS(Matrix<float3> U, Matrix<float3> y)
         {
-            var dim = LU.Size;
-            Assert.IsTrue(dim.x == b.Size.x);
+            var dim = U.Size;
+            Assert.IsTrue(dim.x == y.Size.x);
 
+            //Ux = y
             var x = new Matrix<float3>(dim.x, 1);
 
             var n = dim.x;
             for(var i = 0; i < n; ++i)
             {
-                x[i, 0] = b[i, 0];
-                for(var j = i; j < n-1; ++j)
+                var sum = float3.zero;
+                for (var j = i; j < n; ++j)
                 {
-                    x[i, 0] -= LU[i, j] * x[j, 0]; 
+                    sum += U[i, j] * x[j, 0]; 
                 }
-                x[i, 0] /= D[i, i];
+                x[i, 0] = (y[i,0] - sum)/ U[i, i];
             }
 
             return x;
@@ -692,9 +696,9 @@ namespace UnityFishSimulation
             var e_ij = r_ij - l;
 
             var u_ij = j.velocity - i.velocity;
-            var r_dot = (u_ij * r) / r_ij;
+            var r_dot = math.dot(u_ij, r) / r_ij;
 
-            var n_ij = (((c * e_ij) + (k * r_dot)) / r_ij) * r;
+            var n_ij = ((c * e_ij) + (k * r_dot)) / r_ij;
 
             return n_ij;
         }
