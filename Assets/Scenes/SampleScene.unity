@@ -326,12 +326,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c22bc69dbe2917b43af29f904cbdf1d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  massScale: 1
+  fluidForceSclae: 1
   normals: []
   runtimeList: []
   runtimeMuscleList: []
   runtimeSpringList: []
-  forceSclae: 1
 --- !u!4 &2120106929
 Transform:
   m_ObjectHideFlags: 0
@@ -378,5 +377,7 @@ MonoBehaviour:
   temperature: 1
   minTemperature: 0.0001
   alpha: 0.99
+  phaseScale: 0.5
+  act: 0.5
   testX: 0
   testY: 0

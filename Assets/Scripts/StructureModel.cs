@@ -457,7 +457,7 @@ namespace UnityFishSimulation
                 //this.runtimeList = this.fishGraph.Nodes.ToList();
             }
 
-            if(Input.GetKey(KeyCode.G))
+            //if(Input.GetKey(KeyCode.G))
             {
                 this.Step();
             }
@@ -465,7 +465,9 @@ namespace UnityFishSimulation
             if (Input.GetKey(KeyCode.P))
             {
                 foreach (var value in Enumerable.Range(1, 500))
+                {
                     this.StepMartix();
+                }
             }
         }
 
@@ -544,35 +546,28 @@ namespace UnityFishSimulation
             var At = new Matrix<float3>(dim.x, dim.y);
             var Gt = new Matrix<float3>(dim.x, 1);
 
-            for (var i = 0; i < dim.x; ++i)
+            foreach (var s_ij in this.runtimeSpringList)
             {
-                for (var j = i+1; j < dim.y; ++j)
-                {
-                    var s_ij = this.fishGraph.GetEdge(i, j);
-                    if (s_ij == null)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        Assert.IsNotNull(s_ij);
+                Assert.IsNotNull(s_ij);
 
-                        var ni = s_ij.Left;
-                        var nj = s_ij.Right;
+                var ni = s_ij.Left;
+                var nj = s_ij.Right;
+                var i = ni.Index;
+                var j = nj.Index;
 
-                        var n_ij = GetN(ni, nj, s_ij.c, s_ij.k, s_ij.CurrentL);
-                        var r_ij = nj.Position - ni.Position;
+                var n_ij = GetN(ni, nj, s_ij.c, s_ij.k, s_ij.CurrentL);
+                var r_ij = nj.Position - ni.Position;
 
-                        At[i, i] = At[i, i] + n_ij * dt;
-                        At[j, j] = At[j, j] + n_ij * dt;
+                At[i, i] = At[i, i] + n_ij * dt;
+                At[j, j] = At[j, j] + n_ij * dt;
 
-                        At[i, j] = At[j, i] = -n_ij * dt;
+                At[i, j] = At[j, i] = -n_ij * dt;
 
-                        Gt[i, 0] = Gt[i, 0] + n_ij * r_ij;
-                        Gt[j, 0] = Gt[j, 0] - n_ij * r_ij;
-                    }
-                }
+                Gt[i, 0] = Gt[i, 0] + n_ij * r_ij;
+                Gt[j, 0] = Gt[j, 0] - n_ij * r_ij;
             }
+        
+            
 
             for (var i = 0; i < nodes.Count; ++i)
             {

@@ -140,6 +140,7 @@ namespace UnityFishSimulation
             }
         }
 
+        [Range(0,1)]public float act = 0.5f;
         protected void ApplyByType(StructureModel.Spring.Type type)
         {
             var muscle = this.fishModel.GetSpringByType(type);
@@ -151,7 +152,7 @@ namespace UnityFishSimulation
             var phase = 2 * math.PI;
             //var phase = timeInterval.y - timeInterval.x;
 
-            this.testX += Time.deltaTime * phaseScale;
+            this.testX += 0.055f / 500;
             this.testX %= phase;
 
             var t = this.testX;
@@ -162,12 +163,14 @@ namespace UnityFishSimulation
 
             foreach (var l in muscleLeft)
             {
-                l.activation = math.lerp(l.activation, cos, 0.3f);// 
+                l.activation = act;
+                //l.activation = math.lerp(l.activation, cos, 0.3f);// 
                 //l.activation = activation.Evaluate(t, this.timeInterval);
             }
             foreach (var r in muscleRight)
             {
-                r.activation = math.lerp(r.activation, 1-cos, 0.3f);// 
+                r.activation = 1 - act;
+                //r.activation = math.lerp(r.activation, 1-cos, 0.3f);// 
                 //r.activation = 1 - activation.Evaluate(t, this.timeInterval);
             }
 
