@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Mathematics;
@@ -8,7 +9,8 @@ using UnityTools.Debuging;
 using UnityTools.Debuging.EditorTool;
 
 namespace UnityFishSimulation
-{/*
+{
+    /*
 
     public class Simulator
     {
@@ -23,107 +25,189 @@ namespace UnityFishSimulation
             this.solver = solver;
         }
     }*/
-    public class MotorController : MonoBehaviour
+
+    public class DiscreteFunction<XValue, YValue>
     {
-        [System.Serializable]
-        public class DiscreteFunction
+        [SerializeField] protected CricleData<List<Tuple<XValue,YValue>>, int> valueMap;
+        [SerializeField] protected Tuple<XValue, YValue> start;
+        [SerializeField] protected Tuple<XValue, YValue> end;
+        [SerializeField] protected int sampleNum;
+
+        protected virtual void InitValues()
         {
-            [SerializeField] protected CricleData<List<float2>, int> valueMap;
-            public DiscreteFunction(float2 start, float2 end, float h, int sampleSize)
+            this.AddValue(this.start);
+            for (var i = 1; i < this.sampleNum - 1; ++i)
             {
-                LogTool.LogAssertIsTrue(sampleSize > 0, "Sample size should none 0");
-                this.valueMap = new CricleData<List<float2>, int>(2);
+                this.AddValue(new Tuple<XValue, YValue>(default, default));
+            }
+            this.AddValue(this.end);
 
-                this.AddValue(start);
-                for(var i = 1; i < sampleSize-1; ++i)
+            LogTool.LogAssertIsTrue(this.valueMap.Current.Count == this.valueMap.Next.Count && this.valueMap.Current.Count == sampleNum, "Sample size inconstant");
+        }
+
+        public DiscreteFunction(Tuple<XValue, YValue> start, Tuple<XValue, YValue> end, int sampleNum)
+        {
+            LogTool.LogAssertIsTrue(sampleNum > 0, "Sample size should none 0");
+
+            if (start == null) start = new Tuple<XValue, YValue>(default, default);
+            if (end == null) end = new Tuple<XValue, YValue>(default, default);
+
+            this.valueMap = new CricleData<List<Tuple<XValue, YValue>>, int>(2);
+            this.start = start;
+            this.end = end;
+            this.sampleNum = sampleNum;
+
+            this.InitValues();
+        }
+        public void MoveToNext()
+        {
+            this.valueMap.MoveToNext();
+        }
+        public void MoveToPrev()
+        {
+            this.valueMap.MoveToPrev();
+        }
+        public XValue GetValueX(int index)
+        {
+            var x = math.clamp(index, 0, this.valueMap.Current.Count - 1);
+            return this.valueMap.Current[x].Item1;
+        }
+
+        public void SetValueY(int index, YValue value)
+        {
+            var x = math.clamp(index, 0, this.valueMap.Current.Count - 1);
+            var old = this.valueMap.Current[x];
+            this.valueMap.Current[x] = new Tuple<XValue, YValue>(old.Item1, value);
+        }
+
+        public YValue EvaluateIndex(int index)
+        {
+            var x = math.clamp(index, 0, this.valueMap.Current.Count - 1);
+            return this.valueMap.Current[x].Item2;
+        }
+
+        protected void AddValue(Tuple<XValue, YValue> value)
+        {
+            this.valueMap.Current.Add(value);
+            this.valueMap.Next.Add(value);
+        }
+    }
+
+    public class F2XDiscreteFunction<Y> : DiscreteFunction<float, Y>
+    {
+        public F2XDiscreteFunction():base(default,default,1)
+        {
+
+        }
+        public F2XDiscreteFunction(Tuple<float, Y> start, Tuple<float, Y> end, int sampleNum):base(start, end, sampleNum)
+        {
+
+        }
+        protected override void InitValues()
+        {
+            var h = (this.end.Item1 - this.start.Item1)/this.sampleNum;
+            this.AddValue(this.start);
+            for (var i = 1; i < this.sampleNum - 1; ++i)
+            {
+                this.AddValue(new Tuple<float, Y>(this.start.Item1 + i * h, default));
+            }
+            this.AddValue(this.end);
+
+            LogTool.LogAssertIsTrue(this.valueMap.Current.Count == this.valueMap.Next.Count && this.valueMap.Current.Count == sampleNum, "Sample size inconstant");
+
+        }
+
+        public virtual Y Lerp(Y from, Y to, float t) { return default; }
+
+        public Y Evaluate(float t)
+        {
+            var range = this.end.Item1 - this.start.Item1;
+            LogTool.LogAssertIsFalse(range == 0, "range is 0");
+
+            if (range == 0) return default;
+            var h = range / this.valueMap.Current.Count;
+
+            var index = (t % range) / h;
+            var from = Mathf.FloorToInt(index);
+            var to = Mathf.CeilToInt(index);
+            var yfrom = this.EvaluateIndex(from);
+            var yto = this.EvaluateIndex(to);
+
+            return this.Lerp(yfrom, yto, index - from);
+        }
+    }
+
+    public class F2FloatDiscreteFunction:F2XDiscreteFunction<float>
+    {
+
+        public F2FloatDiscreteFunction(Tuple<float, float> start, Tuple<float, float> end, int sampleNum) : base(start, end, sampleNum)
+        {
+
+        }
+        public override float Lerp(float from, float to, float t)
+        {
+            return math.lerp(from, to, t);
+        }
+        public void RandomNextValues()
+        {
+            for(var i = 0; i < this.valueMap.Next.Count; ++i)
+            {
+                var n = this.valueMap.Next[i].Item1;
+                this.valueMap.Next[i] = new Tuple<float, float>(n, UnityEngine.Random.value);
+            }
+        }
+        public float Devrivate(int index, float h)
+        {
+            return (this.EvaluateIndex(index - 1) + this.EvaluateIndex(index + 1)) / (2 * h);
+        }
+        public float Devrivate2(int index, float h)
+        {
+            return (this.EvaluateIndex(index - 1) + this.EvaluateIndex(index + 1) - (2 * this.EvaluateIndex(index))) / (h * h);
+        }
+        public void OnGizmos(float3 offset)
+        {
+            if (this.valueMap != null)
+            {
+                using (new GizmosScope(Color.cyan, Matrix4x4.TRS(new Vector3(offset.x, offset.y, offset.z), Quaternion.identity, Vector3.one)))
                 {
-                    this.AddValue(new float2(start.x + h * i, UnityEngine.Random.value));
-                }
-                this.AddValue(end);
-
-                LogTool.LogAssertIsTrue(this.valueMap.Current.Count == this.valueMap.Next.Count && this.valueMap.Current.Count == sampleSize, "Sample size inconstant");
-            }
-            public void RandomNextValues(bool withStartEnd = false)
-            {
-                var s = withStartEnd ? 0:1;
-                var e = withStartEnd ? this.valueMap.Next.Count : this.valueMap.Next.Count-1;
-                for (var i = s; i < e; ++i)
-                {
-                    this.valueMap.Next[i] = new float2(this.valueMap.Next[i].x, UnityEngine.Random.value);
-                }
-            }
-            public void MoveToNext()
-            {
-                this.valueMap.MoveToNext();
-            }
-            public void MoveToPrev()
-            {
-                this.valueMap.MoveToPrev();
-            }
-
-            public void SetValueY(int index, float value)
-            {
-                var x = math.clamp(index, 0, this.valueMap.Current.Count - 1);
-                var old = this.valueMap.Current[x];
-                this.valueMap.Current[x] = new float2(old.x, value);
-            }
-
-            public float GetValueX(int index)
-            {
-                var x = math.clamp(index, 0, this.valueMap.Current.Count - 1);
-                return this.valueMap.Current[x].x;
-            }            
-
-            public float Evaluate(float t, float2 minMax)
-            {
-                var range = minMax.y - minMax.x;
-                var h = range / this.valueMap.Current.Count;
-
-                var index = (t % minMax.y) / h;
-                var from = Mathf.FloorToInt(index);
-                var to = Mathf.CeilToInt(index);
-                var yfrom = this.Evaluate(from);
-                var yto = this.Evaluate(to);
-
-                return math.lerp(yfrom, yto, index-from);
-            }
-
-            public float Evaluate(int index)
-            {
-                var x = math.clamp(index, 0, this.valueMap.Current.Count - 1);
-                return this.valueMap.Current[x].y;
-            }
-
-            public float Devrivate(int index, float h)
-            {
-                return (this.Evaluate(index - 1) + this.Evaluate(index + 1)) / (2 * h);
-            }
-            public float Devrivate2(int index, float h)
-            {
-                return (this.Evaluate(index - 1) + this.Evaluate(index + 1) - (2 * this.Evaluate(index))) / (h * h);
-            }
-            public void OnGizmos(float3 offset)
-            {
-                if (this.valueMap != null)
-                {
-                    using (new GizmosScope(Color.cyan, Matrix4x4.TRS(new Vector3(offset.x, offset.y, offset.z), Quaternion.identity, Vector3.one)))
+                    for (var i = 1; i < this.valueMap.Current.Count; ++i)
                     {
-                        for (var i = 1; i < this.valueMap.Current.Count; ++i)
-                        {
-                            var from = new Vector3(this.valueMap.Current[i - 1].x, this.valueMap.Current[i - 1].y);
-                            var to = new Vector3(this.valueMap.Current[i].x, this.valueMap.Current[i].y);
-                            Gizmos.DrawLine(from, to);
-                        }
+                        var from = new Vector3(this.valueMap.Current[i - 1].Item1, this.valueMap.Current[i - 1].Item2);
+                        var to = new Vector3(this.valueMap.Current[i].Item1, this.valueMap.Current[i].Item2);
+                        Gizmos.DrawLine(from, to);
                     }
                 }
             }
-
-            protected void AddValue(float2 value)
-            {
-                this.valueMap.Current.Add(value);
-                this.valueMap.Next.Add(value);
-            }
         }
+    }
+    public class F2Float2DiscreteFunction : F2XDiscreteFunction<float2>
+    {
+
+        public F2Float2DiscreteFunction(Tuple<float, float2> start, Tuple<float, float2> end, int sampleNum) : base(start, end, sampleNum)
+        {
+
+        }
+        public override float2 Lerp(float2 from, float2 to, float t)
+        {
+            return math.lerp(from, to, t);
+        }
+    }
+    public class F2Float3DiscreteFunction : F2XDiscreteFunction<float3>
+    {
+
+        public F2Float3DiscreteFunction(Tuple<float, float3> start, Tuple<float, float3> end, int sampleNum) : base(start, end, sampleNum)
+        {
+
+        }
+        public override float3 Lerp(float3 from, float3 to, float t)
+        {
+            return math.lerp(from, to, t);
+        }
+    }
+
+    public class MotorController : MonoBehaviour
+    {
+        
 
         public const float Smax = 0.075f;
 
@@ -152,8 +236,8 @@ namespace UnityFishSimulation
         [SerializeField] protected FishModelData fishData = new FishModelData();
         [SerializeField] protected FishEularSolver fishSolver = new FishEularSolver();
 
-        [SerializeField] protected Dictionary<Spring.Type, DiscreteFunction> activations = new Dictionary<Spring.Type, DiscreteFunction>();
-        [SerializeField] protected DiscreteFunction trajectory;
+        [SerializeField] protected Dictionary<Spring.Type, F2FloatDiscreteFunction> activations = new Dictionary<Spring.Type, F2FloatDiscreteFunction>();
+        [SerializeField] protected F2Float3DiscreteFunction trajectory;
 
         [SerializeField] protected float2 timeInterval = new float2(0, 5);
         [SerializeField] protected int sampleSize = 15;
@@ -176,15 +260,18 @@ namespace UnityFishSimulation
 
             this.h = (this.timeInterval.y - this.timeInterval.x) / sampleSize;
 
-            var start = new float2(this.timeInterval.x, 0.5f);
-            var end   = new float2(this.timeInterval.y, 0.5f);
+            var start = new Tuple<float, float>(this.timeInterval.x, 0.5f);
+            var end   = new Tuple<float, float>(this.timeInterval.y, 0.5f);
 
 
-            this.activations.Add(Spring.Type.MuscleFront, new DiscreteFunction(start, end, this.h, this.sampleSize));
-            this.activations.Add(Spring.Type.MuscleMiddle, new DiscreteFunction(start, end, this.h, this.sampleSize));
-            this.activations.Add(Spring.Type.MuscleBack, new DiscreteFunction(start, end, this.h, this.sampleSize));
+            this.activations.Add(Spring.Type.MuscleFront, new F2FloatDiscreteFunction(start, end, this.sampleSize));
+            this.activations.Add(Spring.Type.MuscleMiddle, new F2FloatDiscreteFunction(start, end, this.sampleSize));
+            this.activations.Add(Spring.Type.MuscleBack, new F2FloatDiscreteFunction(start, end, this.sampleSize));
 
-            this.trajectory = new DiscreteFunction(start, end, this.h, this.sampleSize);
+            this.trajectory = new F2Float3DiscreteFunction(
+                new Tuple<float, float3>(this.timeInterval.x, 0), 
+                new Tuple<float, float3>(this.timeInterval.y, 0), 
+                this.sampleSize);
 
             this.fishData = GeometryFunctions.Load();            
         }
@@ -199,7 +286,10 @@ namespace UnityFishSimulation
                         this.fishData = GeometryFunctions.Load();
 
                         this.currentTrajactory = 0;
-                        this.trajectory = new DiscreteFunction(float2.zero, float2.zero, this.h, this.sampleSize);
+                        this.trajectory = new F2Float3DiscreteFunction(
+                            new Tuple<float, float3>(this.timeInterval.x, 0),
+                            new Tuple<float, float3>(this.timeInterval.y, 0),
+                            this.sampleSize);
 
                         this.temperature = 1;
 
@@ -300,13 +390,13 @@ namespace UnityFishSimulation
             {
                 //l.Activation = act;
                 //l.Activation = cos;// 
-                l.Activation = activation.Evaluate(t, this.timeInterval);
+                l.Activation = activation.Evaluate(t);
             }
             foreach (var r in muscleRight)
             {
                 //r.Activation = 1 - act;
                 //r.Activation = 1 - cos;// 
-                r.Activation = 1 - activation.Evaluate(t, this.timeInterval);
+                r.Activation = 1 - activation.Evaluate(t);
             }
 
         }
@@ -370,7 +460,7 @@ namespace UnityFishSimulation
             for (int i = 0; i < this.sampleSize; ++i)
             {
                 var Eu = 0f;
-                var Ev = this.trajectory.Evaluate(i);
+                var Ev = math.length(this.trajectory.Evaluate(i) - new float3(100,0,0));
 
                 var v1 = 1f;
                 var v2 = 1f;
@@ -406,11 +496,11 @@ namespace UnityFishSimulation
                     offset.y += 3;
                 }
 
-                this.trajectory.OnGizmos(offset);
+                //this.trajectory.OnGizmos(offset);
 
 
                 var act = this.activations[Spring.Type.MuscleFront];
-                drawtestY = act.Evaluate(drawtestX, this.timeInterval);
+                drawtestY = act.Evaluate(drawtestX);
                 Gizmos.DrawSphere(new Vector3(drawtestX + 10, drawtestY), 0.1f);
             }
 
