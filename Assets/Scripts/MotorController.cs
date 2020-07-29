@@ -4,6 +4,7 @@ using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityTools.Common;
+using UnityTools.Debuging;
 using UnityTools.Debuging.EditorTool;
 
 namespace UnityFishSimulation
@@ -14,18 +15,25 @@ namespace UnityFishSimulation
         public class MuscleActuatorControlFunction
         {
             [SerializeField] protected CricleData<List<float2>, int> valueMap;
-            public MuscleActuatorControlFunction(float start, float h, int sampleSize)
+            public MuscleActuatorControlFunction(float2 start, float2 end, float h, int sampleSize)
             {
+                LogTool.LogAssertIsTrue(sampleSize > 0, "Sample size should none 0");
                 this.valueMap = new CricleData<List<float2>, int>(2);
-                for(var i = 0; i < sampleSize; ++i)
+
+                this.AddValue(start);
+                for(var i = 1; i < sampleSize-1; ++i)
                 {
-                    this.valueMap.Current.Add(new float2(start + h * i, UnityEngine.Random.value));
-                    this.valueMap.Next.Add(new float2(start + h * i, UnityEngine.Random.value));
+                    this.AddValue(new float2(start.x + h * i, UnityEngine.Random.value));
                 }
+                this.AddValue(end);
+
+                LogTool.LogAssertIsTrue(this.valueMap.Current.Count == this.valueMap.Next.Count && this.valueMap.Current.Count == sampleSize, "Sample size inconstant");
             }
-            public void RandomNextValues()
+            public void RandomNextValues(bool withStartEnd = false)
             {
-                for (var i = 0; i < this.valueMap.Next.Count; ++i)
+                var s = withStartEnd ? 0:1;
+                var e = withStartEnd ? this.valueMap.Next.Count : this.valueMap.Next.Count-1;
+                for (var i = s; i < e; ++i)
                 {
                     this.valueMap.Next[i] = new float2(this.valueMap.Next[i].x, UnityEngine.Random.value);
                 }
@@ -81,6 +89,12 @@ namespace UnityFishSimulation
                     }
                 }
             }
+
+            protected void AddValue(float2 value)
+            {
+                this.valueMap.Current.Add(value);
+                this.valueMap.Next.Add(value);
+            }
         }
 
         public const float Smax = 0.075f;
@@ -116,15 +130,14 @@ namespace UnityFishSimulation
             var num = 3;// 12;
             this.activations.Clear();
 
-            var start = this.timeInterval.x;
             this.h = (this.timeInterval.y - this.timeInterval.x) / sampleSize;
 
+            var start = new float2(this.timeInterval.x, 0.5f);
+            var end   = new float2(this.timeInterval.y, 0.5f);
             for (var i = 0; i < num; ++i)
             {
-                this.activations.Add(new MuscleActuatorControlFunction(start, this.h, this.sampleSize));
+                this.activations.Add(new MuscleActuatorControlFunction(start, end, this.h, this.sampleSize));
             }
-
-            this.testX = 90f * Mathf.Deg2Rad;
         }
 
         protected void Update()
@@ -140,46 +153,47 @@ namespace UnityFishSimulation
             }
         }
 
+        public float currentT = 0;
         [Range(0,1)]public float act = 0.5f;
-        protected void ApplyByType(StructureModel.Spring.Type type)
+        protected void ApplyByType(Spring.Type type)
         {
-            var muscle = this.fishModel.GetSpringByType(new List<StructureModel.Spring.Type>() { type });
-            var muscleLeft = muscle.Where(s => s.SpringSide == StructureModel.Spring.Side.Left);
-            var muscleRight = muscle.Where(s => s.SpringSide == StructureModel.Spring.Side.Right);
+            var muscle = this.fishModel.GetSpringByType(new List<Spring.Type>() { type });
+            var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
+            var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
             var activation = this.activations[0];
 
 
-            var phase = 2 * math.PI;
-            //var phase = timeInterval.y - timeInterval.x;
+            //var phase = 2 * math.PI;
+            var phase = timeInterval.y - timeInterval.x;
 
-            this.testX += 0.055f;
-            this.testX %= phase;
+            this.currentT += 0.055f;
+            this.currentT %= phase;
 
-            var t = this.testX;
-            t = (t + (type == StructureModel.Spring.Type.MuscleBack ? math.PI : 0)) % phase;
+            var t = this.currentT;
+            t = (t + (type == Spring.Type.MuscleBack ? math.PI : 0)) % phase;
 
 
             var cos = (1 - (math.cos(t) + 1) * 0.5f);
 
             foreach (var l in muscleLeft)
             {
-                l.Activation = act;
+                //l.Activation = act;
                 //l.Activation = cos;// 
-                //l.activation = activation.Evaluate(t, this.timeInterval);
+                l.Activation = activation.Evaluate(t, this.timeInterval);
             }
             foreach (var r in muscleRight)
             {
-                r.Activation = 1 - act;
+                //r.Activation = 1 - act;
                 //r.Activation = 1 - cos;// 
-                //r.activation = 1 - activation.Evaluate(t, this.timeInterval);
+                r.Activation = 1 - activation.Evaluate(t, this.timeInterval);
             }
 
         }
 
         protected void ApplyToMuscle()
         {
-            this.ApplyByType(StructureModel.Spring.Type.MuscleBack);
-            this.ApplyByType(StructureModel.Spring.Type.MuscleMiddle);
+            this.ApplyByType(Spring.Type.MuscleBack);
+            this.ApplyByType(Spring.Type.MuscleMiddle);
         }
 
         protected void StepSimulatedAnnealing()
@@ -213,7 +227,14 @@ namespace UnityFishSimulation
             {
                 //Debug.Log("Current " + current);
                 //Debug.Log("Min temp reached with count " + count);
-                if(current > 1) this.temperature = 1;
+                if (current > 1)
+                {
+                    this.temperature = 1;
+                }
+                else
+                {
+                    LogTool.Log("Start motor");
+                }
             }
 
         }
@@ -271,16 +292,16 @@ namespace UnityFishSimulation
             return E;
         }
 
-        public float testX = 0;
-        public float testY = 0;
+        public float drawtestX = 0;
+        public float drawtestY = 0;
         protected void OnDrawGizmos()
         {
             if (this.activations.Count > 0)
             {
                 this.activations[0].OnGizmos();
 
-                testY = this.activations[0].Evaluate(testX, this.timeInterval);
-                Gizmos.DrawSphere(new Vector3(testX+10, testY), 0.1f);
+                drawtestY = this.activations[0].Evaluate(drawtestX, this.timeInterval);
+                Gizmos.DrawSphere(new Vector3(drawtestY + 10, drawtestY), 0.1f);
             }
         }
 
