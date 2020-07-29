@@ -326,8 +326,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c22bc69dbe2917b43af29f904cbdf1d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fluidForceSclae: 1
-  normals: []
+  fluidForceScale: 0.5
+  fishData:
+    damping: 0.3
+    normalFace: []
   runtimeList: []
   runtimeMuscleList: []
   runtimeSpringList: []

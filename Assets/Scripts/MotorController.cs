@@ -124,7 +124,7 @@ namespace UnityFishSimulation
                 this.activations.Add(new MuscleActuatorControlFunction(start, this.h, this.sampleSize));
             }
 
-            this.testX = 60f * Mathf.Deg2Rad;
+            this.testX = 90f * Mathf.Deg2Rad;
         }
 
         protected void Update()
@@ -143,34 +143,34 @@ namespace UnityFishSimulation
         [Range(0,1)]public float act = 0.5f;
         protected void ApplyByType(StructureModel.Spring.Type type)
         {
-            var muscle = this.fishModel.GetSpringByType(type);
-            var muscleLeft = muscle.Where(s => s.side == StructureModel.Spring.Side.Left);
-            var muscleRight = muscle.Where(s => s.side == StructureModel.Spring.Side.Right);
+            var muscle = this.fishModel.GetSpringByType(new List<StructureModel.Spring.Type>() { type });
+            var muscleLeft = muscle.Where(s => s.SpringSide == StructureModel.Spring.Side.Left);
+            var muscleRight = muscle.Where(s => s.SpringSide == StructureModel.Spring.Side.Right);
             var activation = this.activations[0];
 
 
             var phase = 2 * math.PI;
             //var phase = timeInterval.y - timeInterval.x;
 
-            this.testX += 0.055f / 500;
+            this.testX += 0.055f;
             this.testX %= phase;
 
             var t = this.testX;
             t = (t + (type == StructureModel.Spring.Type.MuscleBack ? math.PI : 0)) % phase;
 
 
-            var cos = 1 - (math.cos(t) + 1) * 0.5f;
+            var cos = (1 - (math.cos(t) + 1) * 0.5f);
 
             foreach (var l in muscleLeft)
             {
-                l.activation = act;
-                //l.activation = math.lerp(l.activation, cos, 0.3f);// 
+                l.Activation = act;
+                //l.Activation = cos;// 
                 //l.activation = activation.Evaluate(t, this.timeInterval);
             }
             foreach (var r in muscleRight)
             {
-                r.activation = 1 - act;
-                //r.activation = math.lerp(r.activation, 1-cos, 0.3f);// 
+                r.Activation = 1 - act;
+                //r.Activation = 1 - cos;// 
                 //r.activation = 1 - activation.Evaluate(t, this.timeInterval);
             }
 

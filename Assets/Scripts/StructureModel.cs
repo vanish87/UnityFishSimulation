@@ -13,6 +13,7 @@ namespace UnityFishSimulation
     #if USE_EDITOR_EXC
     //[ExecuteInEditMode]
     #endif
+
     public class StructureModel : MonoBehaviour
     {
         [System.Serializable]
@@ -22,11 +23,13 @@ namespace UnityFishSimulation
             [SerializeField] protected float mass;
 
             //runtime
-            public float3 force;
-            public float3 velocity;
+            [SerializeField] protected float3 force;
+            [SerializeField] protected float3 velocity;
 
             public int Index { get => this.id; set => this.id = value; }
             public float Mass { get => this.mass; }
+            public float3 Force { get => this.force; set => this.force = value; }
+            public float3 Velocity { get => this.velocity; set => this.velocity = value; }
         }
 
         [System.Serializable]
@@ -48,31 +51,41 @@ namespace UnityFishSimulation
                 None,
             }
 
-            protected Dictionary<Type, float> elasticMap = new Dictionary<Type, float>()
-            {
-                {Type.Cross , 38f },
-                {Type.MuscleFront, 28f },
-                {Type.MuscleMiddle, 28f },
-                {Type.MuscleBack, 28f },
-                {Type.Normal, 30f },
-            };
+            [SerializeField] protected float c = 38;  // elasticity constant
+            [SerializeField] protected float k = 0.1f;// viscosity constant
+            [SerializeField] protected float lr = 1;   // rest length
+            [SerializeField] protected float lc = 1;   // fully contracted length
+            [SerializeField] protected float activation = 0;
+            [SerializeField] protected Type type = Type.Normal;
+            [SerializeField] protected Side side = Side.None;
+            public float Activation { get => this.activation; set => this.activation = value; }
+            public float CurrentL { get => math.lerp(this.lr, this.lc, this.activation); }
+            public float C { get => this.c; }
+            public float K { get => this.k; }
+            public Type SpringType { get => this.type; }
+            public Side SpringSide { get => this.side; }
 
-            public float c = 38;  // elasticity constant
-            public float k = 0.1f;// viscosity constant
-            public float lr = 1;   // rest length
-            public float lc = 1;   // fully contracted length
-            public float activation = 0;
-            public Type type = Type.Normal;
-            public Side side = Side.None;
-
-            public Spring(Type type, Side side)
+            public Spring(Type type, Side side, MassPoint from, MassPoint to)
             {
+                this.Left = from;
+                this.Right = to;
+
                 this.type = type;
                 this.side = side;
                 this.c = elasticMap[this.type];
+                this.k = viscosityMap[this.type];
+
+                this.activation = 0.5f;
+                var currentL = math.length(from.Position - to.Position);
+                var full = currentL / this.activation;
+
+                var ratio = 0.65f;
+                this.lr = full * ratio;
+                this.lc = full * (1 - ratio);
+
+                //if (type == Spring.Type.MuscleBack) this.lc = this.lr * 0.3f;
             }
 
-            public float CurrentL { get => math.lerp(this.lr, this.lc, this.activation); }
 
             public override string ToString()
             {
@@ -144,7 +157,7 @@ namespace UnityFishSimulation
                 this.force = force;
                 foreach (var node in this.nodeList)
                 {
-                    node.force += force;
+                    node.Force += force;
                 }
             }
 
@@ -187,18 +200,34 @@ namespace UnityFishSimulation
             }
             protected float3 CalVelocity()
             {
-                var v1 = this.nodeList[0].velocity;
-                var v2 = this.nodeList[1].velocity;
-                var v3 = this.nodeList[2].velocity;
-                var v4 = this.nodeList.Count > 3 ? this.nodeList[3].velocity : float3.zero;
+                var v1 = this.nodeList[0].Velocity;
+                var v2 = this.nodeList[1].Velocity;
+                var v3 = this.nodeList[2].Velocity;
+                var v4 = this.nodeList.Count > 3 ? this.nodeList[3].Velocity : float3.zero;
                 var num = this.nodeList.Count;
 
                 return (v1 + v2 + v3 + v4) / num;
             }
         }
 
+        protected static Dictionary<Spring.Type, float> elasticMap = new Dictionary<Spring.Type, float>()
+        {
+            {Spring.Type.Cross , 38f },
+            {Spring.Type.MuscleFront, 28f },
+            {Spring.Type.MuscleMiddle, 28f },
+            {Spring.Type.MuscleBack, 28f },
+            {Spring.Type.Normal, 30f },
+        };
 
-        protected Dictionary<Spring.Type, Color> springColorMap = new Dictionary<Spring.Type, Color>()
+        protected static Dictionary<Spring.Type, float> viscosityMap = new Dictionary<Spring.Type, float>()
+        {
+            {Spring.Type.Cross , 0.1f },
+            {Spring.Type.MuscleFront, 0.1f },
+            {Spring.Type.MuscleMiddle, 0.1f },
+            {Spring.Type.MuscleBack, 0.1f },
+            {Spring.Type.Normal, 0.1f },
+        };
+        protected static Dictionary<Spring.Type, Color> springColorMap = new Dictionary<Spring.Type, Color>()
         {
             {Spring.Type.Cross , Color.gray },
             {Spring.Type.MuscleFront, Color.red },
@@ -207,68 +236,60 @@ namespace UnityFishSimulation
             {Spring.Type.Normal, Color.cyan },
         };
 
-        [SerializeField, Range(0.01f, 1)] protected float fluidForceSclae = 0.5f;
-        protected Graph<MassPoint, Spring> fishGraph = new Graph<MassPoint, Spring>(23);
-        [SerializeField] protected List<NormalFace> normals = new List<NormalFace>();
+        [System.Serializable]
+        public class FishModelData
+        {
+            [SerializeField, Range(0.01f, 1)] protected float damping = 0.05f;
+            protected Graph<MassPoint, Spring> fishGraph = new Graph<MassPoint, Spring>(23);
+            [SerializeField] protected List<NormalFace> normalFace = new List<NormalFace>();
 
+            public Graph<MassPoint, Spring> FishGraph { get => this.fishGraph; set => this.fishGraph = value; }
+            public List<NormalFace> FishNormalFace { get => this.normalFace; }
+            public float Damping { get => this.damping; }
+        }
+
+        [SerializeField, Range(0.01f, 1)] protected float fluidForceScale = 0.5f;
+        [SerializeField] protected FishModelData fishData = new FishModelData();
         [SerializeField] protected List<MassPoint> runtimeList;
         [SerializeField] protected List<Spring> runtimeMuscleList;
         [SerializeField] protected List<Spring> runtimeSpringList;
 
+        protected Graph<MassPoint, Spring> FishGraph { get => this.fishData.FishGraph; }
+
         protected float3 totalForce;
 
-        public List<Spring> GetSpringByType(Spring.Type type)
+        public List<Spring> GetSpringByType(List<Spring.Type> types)
         {
-            var ret = new List<Spring>();
-            for (var r = 0; r < this.fishGraph.AdjMatrix.Size.x; ++r)
-            {
-                for (var c = 0; c < this.fishGraph.AdjMatrix.Size.y; ++c)
-                {
-                    var s = this.fishGraph.GetEdge(r, c);
-                    if (s == null || s.type != type) continue;
-                    if (ret.Contains(s)) continue;
-
-                    ret.Add(s);
-                }
-            }
-
-            return ret;
+            return this.FishGraph.Edges.Where(e => types.Contains(e.SpringType)).ToList();
         }
 
         protected void Start()
         {
             this.Load();
-            this.fishGraph.Print();
-
-            this.runtimeList = this.fishGraph.Nodes.ToList();
-
-            this.fishGraph.AdjMatrix.Clean();
-            this.InitSprings();
-
-            this.runtimeSpringList = new List<Spring>();
-            for (var r = 0; r < this.fishGraph.AdjMatrix.Size.x; ++r)
-            {
-                for (var c = 0; c < this.fishGraph.AdjMatrix.Size.y; ++c)
-                {
-                    var edge = this.fishGraph.GetEdge(r, c);
-                    if (edge == null || r == c) continue;
-                    if (this.runtimeSpringList.Contains(edge)) continue;
-
-                    this.runtimeSpringList.Add(edge);
-                }
-            }
-
-            this.runtimeMuscleList = this.GetSpringByType(Spring.Type.MuscleBack);
-            this.runtimeMuscleList.AddRange(this.GetSpringByType(Spring.Type.MuscleMiddle));
-            this.runtimeMuscleList.AddRange(this.GetSpringByType(Spring.Type.MuscleFront));
-
-            this.InitNormals();
-
+            this.RefreshRuntimeList();
         }        
+
+        protected void RefreshRuntimeList()
+        {
+            this.runtimeList = this.FishGraph.Nodes.ToList();
+            this.runtimeSpringList = this.FishGraph.Edges.ToList();
+            this.runtimeMuscleList = this.GetSpringByType(
+                new List<Spring.Type>{
+                    Spring.Type.MuscleBack,
+                    Spring.Type.MuscleMiddle,
+                    Spring.Type.MuscleFront }
+                );
+        }
+        protected void InitNewFishModel()
+        {
+            this.FishGraph.AdjMatrix.Clean();
+            this.InitSprings();
+            this.InitNormals();
+        }
 
         protected void InitNormals()
         {
-/*
+            /*
             this.AddNormalFace(0, 1, 2);
             this.AddNormalFace(0, 2, 3);
             this.AddNormalFace(0, 3, 4);
@@ -303,8 +324,8 @@ namespace UnityFishSimulation
 
         protected void AddNormalFace(int p1, int p2, int p3, int p4 = -1)
         {
-            var nodes = this.fishGraph.Nodes.ToList();
-            this.normals.Add(new NormalFace(nodes[p1], nodes[p2], nodes[p3], p4<0?null:nodes[p4]));
+            var nodes = this.FishGraph.Nodes.ToList();
+            this.fishData.FishNormalFace.Add(new NormalFace(nodes[p1], nodes[p2], nodes[p3], p4<0?null:nodes[p4]));
         }
 
         protected void InitSprings()
@@ -428,33 +449,24 @@ namespace UnityFishSimulation
 
         }
 
-        protected void AddSpring(int from, int to, Spring.Type type, Spring.Side side = Spring.Side.None, float k = 0.1f)
+        protected void AddSpring(int from, int to, Spring.Type type, Spring.Side side = Spring.Side.None)
         {
-            var nodes = this.fishGraph.Nodes.ToList();
-            var s = new Spring(type, side);
-            s.Left = nodes[from];
-            s.Right = nodes[to];
+            var nodes = this.FishGraph.Nodes.ToList();
+            var s = new Spring(type, side, nodes[from], nodes[to]);
 
-            s.k = k;
-            s.lr = math.length(nodes[from].Position - nodes[to].Position);
-            s.lc = s.lr * 0.5f;
-
-            if (type == Spring.Type.MuscleBack) s.lc = s.lr * 0.3f;
-
-            this.fishGraph.AddEdge(from, to, s);
+            this.FishGraph.AddEdge(from, to, s);
         }
 
         protected void Update()
         {
             if(Input.GetKeyDown(KeyCode.S))
             {
-                var path = System.IO.Path.Combine(Application.streamingAssetsPath, "fish.graph");
-                FileTool.Write(path, this.fishGraph);
+                this.Save();
             }
             if(Input.GetKeyDown(KeyCode.L))
             {
                 this.Load();
-                //this.runtimeList = this.fishGraph.Nodes.ToList();
+                this.RefreshRuntimeList();
             }
 
             //if(Input.GetKey(KeyCode.G))
@@ -471,36 +483,38 @@ namespace UnityFishSimulation
             }
         }
 
+        protected void Save()
+        {
+            var path = System.IO.Path.Combine(Application.streamingAssetsPath, "fish.model");
+            FileTool.Write(path, this.fishData);
+            LogTool.Log("Saved " + path);
+        }
         protected void Load()
         {
-            var path = System.IO.Path.Combine(Application.streamingAssetsPath, "fish.graph");
-            this.fishGraph = FileTool.Read<Graph<MassPoint, Spring>>(path);
+            var path = System.IO.Path.Combine(Application.streamingAssetsPath, "fish.model");
+            this.fishData = FileTool.Read<FishModelData>(path);
+            LogTool.Log("Loaded " + path);
         }
 
         protected void OnDrawGizmos()
         {
-            if(this.fishGraph != null)
+            if(this.FishGraph != null)
             {
-                for (var r = 0; r < this.fishGraph.AdjMatrix.Size.x; ++r)
+                foreach( var edge in this.FishGraph.Edges)
                 {
-                    for (var c = 0; c < this.fishGraph.AdjMatrix.Size.y; ++c)
+                    using (new GizmosScope(springColorMap[edge.SpringType], Matrix4x4.identity))
                     {
-                        var edge = this.fishGraph.GetEdge(r, c);
-                        if (edge == null) continue;
-
-                        Gizmos.color = this.springColorMap[edge.type];
-                        
                         edge.OnGizmos();
                     }
                 }
             }
-            foreach (var n in this.fishGraph.Nodes) n.OnGizmos(50 * Unit.WorldMMToUnityUnit);
-            foreach (var n in this.fishGraph.Nodes)
+            foreach (var n in this.FishGraph.Nodes)
             {
-                Gizmos.DrawLine(n.Position, n.Position + n.velocity);
+                n.OnGizmos(50 * Unit.WorldMMToUnityUnit);
+                Gizmos.DrawLine(n.Position, n.Position + n.Velocity);
             }
 
-            foreach (var n in this.normals) n.OnGizmos(200 * Unit.WorldMMToUnityUnit);
+            foreach (var n in this.fishData.FishNormalFace) n.OnGizmos(200 * Unit.WorldMMToUnityUnit);
 
             Gizmos.DrawLine(Vector3.zero, this.totalForce);
         }
@@ -509,39 +523,42 @@ namespace UnityFishSimulation
             foreach (var value in Enumerable.Range(1, 10))
             {
                 var dt = 0.005f;
-                foreach (var n in this.fishGraph.Nodes)
+                foreach (var n in this.FishGraph.Nodes)
                 {
                     var force = this.GetSpringForce(n);
-                    n.force = force;
+                    n.Force = force;
                 }
 
                 this.ApplyFluidForce();
 
                 this.totalForce = 0;
-                foreach (var n in this.fishGraph.Nodes)
+                foreach (var n in this.FishGraph.Nodes)
                 {
-                    n.velocity += (n.force / n.Mass) * dt;
-                    n.Position += n.velocity * dt;
+                    var newVelocity = n.Velocity + (n.Force / n.Mass) * dt;
+                    n.Force += -this.fishData.Damping * newVelocity;
 
-                    this.totalForce += n.force;
+                    n.Velocity += (n.Force / n.Mass) * dt;
+                    n.Position += n.Velocity * dt;
+
+                    this.totalForce += n.Force;
                 }
             }
         }
 
         protected void StepMartix()
         {
-            foreach (var n in this.fishGraph.Nodes)
+            foreach (var n in this.FishGraph.Nodes)
             {
-                n.force = 0;
+                n.Force = 0;
             }
             this.ApplyFluidForce();
 
 
             var dt = 0.055f;
-            var na = 7;
+            //var na = 7;
 
-            var dim = this.fishGraph.AdjMatrix.Size;
-            var nodes = this.fishGraph.Nodes.ToList();
+            var dim = this.FishGraph.AdjMatrix.Size;
+            var nodes = this.FishGraph.Nodes.ToList();
 
             var At = new Matrix<float3>(dim.x, dim.y);
             var Gt = new Matrix<float3>(dim.x, 1);
@@ -555,7 +572,7 @@ namespace UnityFishSimulation
                 var i = ni.Index;
                 var j = nj.Index;
 
-                var n_ij = GetN(ni, nj, s_ij.c, s_ij.k, s_ij.CurrentL);
+                var n_ij = GetN(ni, nj, s_ij.C, s_ij.K, s_ij.CurrentL);
                 var r_ij = nj.Position - ni.Position;
 
                 At[i, i] = At[i, i] + n_ij * dt;
@@ -572,8 +589,8 @@ namespace UnityFishSimulation
             for (var i = 0; i < nodes.Count; ++i)
             {
                 var mi = nodes[i].Mass;
-                var fi = nodes[i].force;
-                var vi = nodes[i].velocity;
+                var fi = nodes[i].Force;
+                var vi = nodes[i].Velocity;
                 At[i, i] = At[i, i] + mi / dt;
                 Gt[i, 0] = Gt[i, 0] + fi + (mi / dt) * vi;
             }
@@ -609,10 +626,10 @@ namespace UnityFishSimulation
 
             //this.Print(X_dot, "X_Velocity", true);
 
-            foreach (var n in this.fishGraph.Nodes)
+            foreach (var n in this.FishGraph.Nodes)
             {
-                n.velocity = X_dot[n.Index,0];
-                n.Position += n.velocity * dt;
+                n.Velocity = X_dot[n.Index,0];
+                n.Position += n.Velocity * dt;
             }
 
         }
@@ -690,7 +707,7 @@ namespace UnityFishSimulation
 
             var e_ij = r_ij - l;
 
-            var u_ij = j.velocity - i.velocity;
+            var u_ij = j.Velocity - i.Velocity;
             var r_dot = math.dot(u_ij, r) / r_ij;
 
             var n_ij = ((c * e_ij) + (k * r_dot)) / r_ij;
@@ -699,22 +716,22 @@ namespace UnityFishSimulation
         }
         protected float3 GetSpringForce(MassPoint i)
         {
-            var neighbors = this.fishGraph.GetNeighborsNode(i);
+            var neighbors = this.FishGraph.GetNeighborsNode(i);
             var ret = float3.zero;
 
             foreach(var j in neighbors)
             {
                 var r = j.Position - i.Position;
                 var r_ij = math.length(r);
-                var s_ij = this.fishGraph.GetEdge(i, j);
+                var s_ij = this.FishGraph.GetEdge(i, j);
                 Assert.IsNotNull(s_ij);
 
                 var e_ij = r_ij - s_ij.CurrentL;
 
-                var u_ij = j.velocity - i.velocity;
+                var u_ij = j.Velocity - i.Velocity;
                 var r_dot = (u_ij * r) / r_ij;
 
-                var force_ij = (((s_ij.c * e_ij) + (s_ij.k * r_dot))/ r_ij) * r;
+                var force_ij = (((s_ij.C * e_ij) + (s_ij.K * r_dot))/ r_ij) * r;
                 ret += force_ij;
             }
 
@@ -724,9 +741,9 @@ namespace UnityFishSimulation
 
         protected void ApplyFluidForce()
         {
-            foreach(var face in this.normals)
+            foreach(var face in this.fishData.FishNormalFace)
             {
-                face.ApplyForceToNode(this.fluidForceSclae);
+                face.ApplyForceToNode(this.fluidForceScale);
             }
         }
 
