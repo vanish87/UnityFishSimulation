@@ -5,6 +5,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityTools.Common;
+using UnityTools.Debuging;
 using UnityTools.Debuging.EditorTool;
 
 namespace UnityFishSimulation
@@ -56,10 +57,62 @@ namespace UnityFishSimulation
         public float3 Direction { get => this.Head.Position - this.GeometryCenter; }
 
         public MassPoint Head { get => this.FishGraph.Nodes.ToList()[0]; }
+
+        public void OnGizmos(Dictionary<Spring.Type, Color> springColorMap)
+        {
+            if (this.FishGraph != null)
+            {
+                foreach (var edge in this.FishGraph.Edges)
+                {
+                    using (new GizmosScope(springColorMap[edge.SpringType], Matrix4x4.identity))
+                    {
+                        edge.OnGizmos();
+                    }
+                }
+            }
+            foreach (var n in this.FishGraph.Nodes)
+            {
+                n.OnGizmos(50 * Unit.WorldMMToUnityUnit);
+                //Gizmos.DrawLine(n.Position, n.Position + n.Velocity);
+            }
+
+            foreach (var n in this.FishNormalFace) n.OnGizmos(200 * Unit.WorldMMToUnityUnit);
+
+            //Gizmos.DrawLine(Vector3.zero, this.totalForce);
+
+            using (new GizmosScope(Color.red, Matrix4x4.identity))
+            {
+                Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Direction);
+                Gizmos.DrawLine(this.Head.Position, this.Head.Position + this.Velocity);
+            }
+        }
     }
 
     public static class GeometryFunctions
     {
+
+        public static Dictionary<Spring.Type, Color> springColorMap = new Dictionary<Spring.Type, Color>()
+        {
+            {Spring.Type.Cross , Color.gray },
+            {Spring.Type.MuscleFront, Color.red },
+            {Spring.Type.MuscleMiddle, Color.green },
+            {Spring.Type.MuscleBack, Color.blue },
+            {Spring.Type.Normal, Color.cyan },
+        };
+        public static void Save(FishModelData fish, string fileName = "fish.model")
+        {
+            var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
+            FileTool.Write(path, fish);
+            LogTool.Log("Saved " + path);
+        }
+        public static FishModelData Load(string fileName = "fish.model")
+        {
+            var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
+            var ret = FileTool.Read<FishModelData>(path);
+            LogTool.Log("Loaded " + path);
+            return ret;
+        }
+
         public static void InitNewFishModel(FishModelData fish)
         {
             fish.FishGraph.AdjMatrix.Clean();

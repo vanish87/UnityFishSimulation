@@ -8,14 +8,28 @@ using UnityTools.Debuging;
 using UnityTools.Debuging.EditorTool;
 
 namespace UnityFishSimulation
-{
+{/*
+
+    public class Simulator
+    {
+        [SerializeField] protected FishModelData fish;
+        [SerializeField] protected FishSolver solver;
+
+        [SerializeField] protected DiscreteFunction trajectory = new DiscreteFunction();
+
+        public void Init(FishModelData fish, FishSolver solver)
+        {
+            this.fish = fish;
+            this.solver = solver;
+        }
+    }*/
     public class MotorController : MonoBehaviour
     {
         [System.Serializable]
-        public class MuscleActuatorControlFunction
+        public class DiscreteFunction
         {
             [SerializeField] protected CricleData<List<float2>, int> valueMap;
-            public MuscleActuatorControlFunction(float2 start, float2 end, float h, int sampleSize)
+            public DiscreteFunction(float2 start, float2 end, float h, int sampleSize)
             {
                 LogTool.LogAssertIsTrue(sampleSize > 0, "Sample size should none 0");
                 this.valueMap = new CricleData<List<float2>, int>(2);
@@ -46,6 +60,20 @@ namespace UnityFishSimulation
             {
                 this.valueMap.MoveToPrev();
             }
+
+            public void SetValueY(int index, float value)
+            {
+                var x = math.clamp(index, 0, this.valueMap.Current.Count - 1);
+                var old = this.valueMap.Current[x];
+                this.valueMap.Current[x] = new float2(old.x, value);
+            }
+
+            public float GetValueX(int index)
+            {
+                var x = math.clamp(index, 0, this.valueMap.Current.Count - 1);
+                return this.valueMap.Current[x].x;
+            }            
+
             public float Evaluate(float t, float2 minMax)
             {
                 var range = minMax.y - minMax.x;
@@ -74,11 +102,11 @@ namespace UnityFishSimulation
             {
                 return (this.Evaluate(index - 1) + this.Evaluate(index + 1) - (2 * this.Evaluate(index))) / (h * h);
             }
-            public void OnGizmos()
+            public void OnGizmos(float3 offset)
             {
                 if (this.valueMap != null)
                 {
-                    using (new GizmosScope(Color.cyan, Matrix4x4.TRS(new Vector3(10, 0, 0), Quaternion.identity, Vector3.one)))
+                    using (new GizmosScope(Color.cyan, Matrix4x4.TRS(new Vector3(offset.x, offset.y, offset.z), Quaternion.identity, Vector3.one)))
                     {
                         for (var i = 1; i < this.valueMap.Current.Count; ++i)
                         {
@@ -99,7 +127,6 @@ namespace UnityFishSimulation
 
         public const float Smax = 0.075f;
 
-        [SerializeField] protected StructureModel fishModel;
         [SerializeField]
         protected List<float2> amplitudeParameter = new List<float2>(2)
         {
@@ -113,7 +140,20 @@ namespace UnityFishSimulation
             new float2(0,Smax),
         };
 
-        [SerializeField] protected List<MuscleActuatorControlFunction> activations = new List<MuscleActuatorControlFunction>();
+        public enum SAState
+        {
+            Start,
+            FishTrajectorySimulating,
+            SAEvaluating,
+            SADone,
+        }
+
+
+        [SerializeField] protected FishModelData fishData = new FishModelData();
+        [SerializeField] protected FishEularSolver fishSolver = new FishEularSolver();
+
+        [SerializeField] protected Dictionary<Spring.Type, DiscreteFunction> activations = new Dictionary<Spring.Type, DiscreteFunction>();
+        [SerializeField] protected DiscreteFunction trajectory;
 
         [SerializeField] protected float2 timeInterval = new float2(0, 5);
         [SerializeField] protected int sampleSize = 15;
@@ -121,59 +161,140 @@ namespace UnityFishSimulation
 
         [SerializeField] protected float temperature = 1;
         [SerializeField] protected float minTemperature = 0.0001f;
-        [SerializeField] protected float alpha = 0.98f;
+        [SerializeField] protected float alpha = 0.99f;
 
-        [SerializeField, Range(0.5f, 10)] protected float phaseScale = 0.5f;
+
+        [SerializeField, Range(0, 1)] protected float act = 0.5f;
+
+        [SerializeField] protected float current = 0;
+        [SerializeField] protected int currentTrajactory = 0;
+        [SerializeField] protected SAState currentState = SAState.Start;
 
         protected void Start()
         {
-            var num = 3;// 12;
             this.activations.Clear();
 
             this.h = (this.timeInterval.y - this.timeInterval.x) / sampleSize;
 
             var start = new float2(this.timeInterval.x, 0.5f);
             var end   = new float2(this.timeInterval.y, 0.5f);
-            for (var i = 0; i < num; ++i)
-            {
-                this.activations.Add(new MuscleActuatorControlFunction(start, end, this.h, this.sampleSize));
-            }
+
+
+            this.activations.Add(Spring.Type.MuscleFront, new DiscreteFunction(start, end, this.h, this.sampleSize));
+            this.activations.Add(Spring.Type.MuscleMiddle, new DiscreteFunction(start, end, this.h, this.sampleSize));
+            this.activations.Add(Spring.Type.MuscleBack, new DiscreteFunction(start, end, this.h, this.sampleSize));
+
+            this.trajectory = new DiscreteFunction(start, end, this.h, this.sampleSize);
+
+            this.fishData = GeometryFunctions.Load();            
         }
 
         protected void Update()
         {
-            //if(Input.GetKey(KeyCode.N))
+            switch(this.currentState)
             {
-                this.StepSimulatedAnnealing();
+                case SAState.Start:
+                    {
+                        this.current = 0;
+                        this.fishData = GeometryFunctions.Load();
+
+                        this.currentTrajactory = 0;
+                        this.trajectory = new DiscreteFunction(float2.zero, float2.zero, this.h, this.sampleSize);
+
+                        this.temperature = 1;
+
+                        this.currentState = SAState.FishTrajectorySimulating;
+                    }
+                    break;
+                case SAState.FishTrajectorySimulating:
+                    {
+                        var end = this.timeInterval.y;
+                        if (this.current < end)
+                        {
+                            this.ApplyControlParameter(this.fishData, this.current);
+
+                            this.Simulate();
+                            this.current += Solver.dt;
+
+                            if(this.current > this.trajectory.GetValueX(this.currentTrajactory))
+                            {
+                                var dis = math.length(new float3(100, 0, 0) - this.fishData.Head.Position);
+                                this.trajectory.SetValueY(this.currentTrajactory, dis);
+                                this.currentTrajactory++;
+                            }
+                        }
+                        else
+                        {
+                            this.currentState = SAState.SAEvaluating;
+                        }
+                    }
+                    break;
+                case SAState.SAEvaluating:
+                    {
+                        this.StepSimulatedAnnealing();
+                        if (this.temperature <= this.minTemperature)
+                        {
+                            this.currentState = SAState.SADone;
+                        }
+                        else 
+                        {
+                            this.currentState = SAState.Start;
+                        }
+                    }
+                    break;
+                default:break;
             }
 
-            //if(Input.GetKey(KeyCode.M))
+
+            if(Input.GetKeyDown(KeyCode.A))
             {
-                this.ApplyToMuscle();
+                this.ApplyControlParameter(this.fishData, this.act);
+                this.Simulate();
             }
         }
 
-        public float currentT = 0;
-        [Range(0,1)]public float act = 0.5f;
-        protected void ApplyByType(Spring.Type type)
+        protected void Simulate()
         {
-            var muscle = this.fishModel.GetSpringByType(new List<Spring.Type>() { type });
+            this.fishSolver.Step(this.fishData, Solver.dt);
+        }
+
+        protected void SimulateNext()
+        {
+            this.trajectory.MoveToNext();
+            this.fishData = GeometryFunctions.Load();
+
+            var s = this.timeInterval.x;
+            var e = this.timeInterval.y;
+            var c = 0;
+
+            while(s < e)
+            {
+                this.ApplyControlParameter(this.fishData, s);
+                this.fishSolver.Step(this.fishData, Solver.dt);
+                s += Solver.dt;
+
+                if (s > this.trajectory.GetValueX(c))
+                {
+                    var dis = math.length(new float3(100, 0, 0) - this.fishData.Head.Position);
+                    this.trajectory.SetValueY(c, dis);
+                    c++;
+                }
+            }
+        }
+
+        protected void ApplyControlParameter(FishModelData fish, float current)
+        {
+            this.ApplyByType(fish, Spring.Type.MuscleFront, current);
+            this.ApplyByType(fish, Spring.Type.MuscleMiddle, current);
+            this.ApplyByType(fish, Spring.Type.MuscleBack, current);
+        }
+        protected void ApplyByType(FishModelData fish, Spring.Type type, float t)
+        {
+            var muscle = fish.GetSpringByType(new List<Spring.Type>() { type });
             var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
             var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
-            var activation = this.activations[0];
+            var activation = this.activations[type];
 
-
-            //var phase = 2 * math.PI;
-            var phase = timeInterval.y - timeInterval.x;
-
-            this.currentT += 0.055f;
-            this.currentT %= phase;
-
-            var t = this.currentT;
-            t = (t + (type == Spring.Type.MuscleBack ? math.PI : 0)) % phase;
-
-
-            var cos = (1 - (math.cos(t) + 1) * 0.5f);
 
             foreach (var l in muscleLeft)
             {
@@ -190,29 +311,23 @@ namespace UnityFishSimulation
 
         }
 
-        protected void ApplyToMuscle()
-        {
-            this.ApplyByType(Spring.Type.MuscleBack);
-            this.ApplyByType(Spring.Type.MuscleMiddle);
-        }
-
         protected void StepSimulatedAnnealing()
         {
-            var count = 0;
             var current = this.GetCurrentE();
-            while (this.temperature > this.minTemperature)
+            if (this.temperature > this.minTemperature)
             {
-                count++;
-                foreach (var a in this.activations)
+                foreach (var a in this.activations.Values)
                 {
                     a.RandomNextValues();
                     a.MoveToNext();
                 }
 
+                this.SimulateNext();
+
                 var next = this.GetCurrentE();
                 if (this.ShouldUseNext(current, next) == false)
                 {
-                    foreach (var a in this.activations)
+                    foreach (var a in this.activations.Values)
                     {
                         a.MoveToPrev();
                     }
@@ -221,22 +336,8 @@ namespace UnityFishSimulation
                 //this.temperature = this.temperature/(1+this.alpha*this.temperature);
                 this.temperature *= this.alpha;
 
-                //Debug.Log("Current " + current + " Next " + next);
+                Debug.Log("Current " + current + " Next " + next);
             }
-            
-            {
-                //Debug.Log("Current " + current);
-                //Debug.Log("Min temp reached with count " + count);
-                if (current > 1)
-                {
-                    this.temperature = 1;
-                }
-                else
-                {
-                    LogTool.Log("Start motor");
-                }
-            }
-
         }
 
         protected bool ShouldUseNext(float current, float next)
@@ -262,21 +363,21 @@ namespace UnityFishSimulation
         protected float GetCurrentE()
         {
             var mu1 = 1f;
-            var mu2 = 0f;
+            var mu2 = 1f;
 
             var E = 0f;
 
             for (int i = 0; i < this.sampleSize; ++i)
             {
                 var Eu = 0f;
-                var Ev = 0f;
+                var Ev = this.trajectory.Evaluate(i);
 
                 var v1 = 1f;
                 var v2 = 1f;
 
                 var du = 0f;
                 var du2 = 0f;
-                foreach (var fun in this.activations)
+                foreach (var fun in this.activations.Values)
                 {
                     var dev = fun.Devrivate(i, this.h);
                     var dev2 = fun.Devrivate2(i, this.h);
@@ -298,11 +399,22 @@ namespace UnityFishSimulation
         {
             if (this.activations.Count > 0)
             {
-                this.activations[0].OnGizmos();
+                var offset = new float3(10, 0, 0);
+                foreach (var activation in this.activations.Values)
+                {
+                    activation.OnGizmos(offset);
+                    offset.y += 3;
+                }
 
-                drawtestY = this.activations[0].Evaluate(drawtestX, this.timeInterval);
-                Gizmos.DrawSphere(new Vector3(drawtestY + 10, drawtestY), 0.1f);
+                this.trajectory.OnGizmos(offset);
+
+
+                var act = this.activations[Spring.Type.MuscleFront];
+                drawtestY = act.Evaluate(drawtestX, this.timeInterval);
+                Gizmos.DrawSphere(new Vector3(drawtestX + 10, drawtestY), 0.1f);
             }
+
+            this.fishData.OnGizmos(GeometryFunctions.springColorMap);
         }
 
     }

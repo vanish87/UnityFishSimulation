@@ -10,14 +10,17 @@ namespace UnityFishSimulation
 {
     public interface FishSolver
     {
+        void Step(FishModelData fish, float dt = Solver.dt);
         void PreSolve(FishModelData fish);
         void ApplyForces(FishModelData fish);
-        void Intergrate(FishModelData fish);
+        void Intergrate(FishModelData fish, float dt);
         void PostSolve(FishModelData fish);
     }
 
     public static class Solver
     {
+        public const float dt = 0.055f;
+
         public static Matrix<float3> SolverFS(Matrix<float3> L, Matrix<float3> b)
         {
             var dim = L.Size;
@@ -66,6 +69,20 @@ namespace UnityFishSimulation
     public class FishEularSolver : FishSolver
     {
         [SerializeField, Range(0.01f, 1)] protected float fluidForceScale = 1f;
+
+        public void Step(FishModelData fish, float dt = 0.055F)
+        {
+            var step = 10;
+            dt = dt / step;
+            foreach (var value in Enumerable.Range(0, step))
+            {
+                this.PreSolve(fish);
+                this.ApplyForces(fish);
+                this.Intergrate(fish, dt);
+                this.PostSolve(fish);
+            }
+        }
+
         public void PreSolve(FishModelData fish)
         {
             foreach (var n in fish.FishGraph.Nodes) n.Force = 0;
@@ -76,10 +93,8 @@ namespace UnityFishSimulation
             this.ApplyFluidForce(fish);
         }
 
-        public void Intergrate(FishModelData fish)
+        public void Intergrate(FishModelData fish, float dt)
         {
-            var dt = 0.005f;
-
             foreach (var n in fish.FishGraph.Nodes)
             {
                 var newVelocity = n.Velocity + (n.Force / n.Mass) * dt;
@@ -140,6 +155,20 @@ namespace UnityFishSimulation
     public class FishMatrixSolver : FishSolver
     {
         [SerializeField, Range(0.01f, 1)] protected float fluidForceScale = 1f;
+
+        public void Step(FishModelData fish, float dt = 0.055F)
+        {
+            var step = 1;
+            dt = dt / step;
+            foreach (var value in Enumerable.Range(0, step))
+            {
+                this.PreSolve(fish);
+                this.ApplyForces(fish);
+                this.Intergrate(fish, dt);
+                this.PostSolve(fish);
+            }
+        }
+
         public void PreSolve(FishModelData fish)
         {
             foreach (var n in fish.FishGraph.Nodes) n.Force = 0;
@@ -149,9 +178,8 @@ namespace UnityFishSimulation
             this.ApplyFluidForce(fish);
         }
 
-        public void Intergrate(FishModelData fish)
+        public void Intergrate(FishModelData fish, float dt)
         {
-            var dt = 0.055f;
             //var na = 7;
 
             var dim = fish.FishGraph.AdjMatrix.Size;
@@ -172,10 +200,10 @@ namespace UnityFishSimulation
                 var n_ij = GetN(ni, nj, s_ij.C, s_ij.K, s_ij.CurrentL);
                 var r_ij = nj.Position - ni.Position;
 
-                At[i, i] = At[i, i] + n_ij * dt;
-                At[j, j] = At[j, j] + n_ij * dt;
+                At[i, i] = At[i, i] + n_ij * Solver.dt;
+                At[j, j] = At[j, j] + n_ij * Solver.dt;
 
-                At[i, j] = At[j, i] = -n_ij * dt;
+                At[i, j] = At[j, i] = -n_ij * Solver.dt;
 
                 Gt[i, 0] = Gt[i, 0] + n_ij * r_ij;
                 Gt[j, 0] = Gt[j, 0] - n_ij * r_ij;
@@ -188,8 +216,8 @@ namespace UnityFishSimulation
                 var mi = nodes[i].Mass;
                 var fi = nodes[i].Force;
                 var vi = nodes[i].Velocity;
-                At[i, i] = At[i, i] + mi / dt;
-                Gt[i, 0] = Gt[i, 0] + fi + (mi / dt) * vi;
+                At[i, i] = At[i, i] + mi / Solver.dt;
+                Gt[i, 0] = Gt[i, 0] + fi + (mi / Solver.dt) * vi;
             }
 
 
@@ -226,7 +254,7 @@ namespace UnityFishSimulation
             foreach (var n in fish.FishGraph.Nodes)
             {
                 n.Velocity = X_dot[n.Index, 0];
-                n.Position += n.Velocity * dt;
+                n.Position += n.Velocity * Solver.dt;
             }
         }
 

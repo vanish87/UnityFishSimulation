@@ -321,15 +321,18 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2120106927}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c22bc69dbe2917b43af29f904cbdf1d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fluidForceScale: 0.5
   fishData:
     damping: 0.3
     normalFace: []
+  fishSolver:
+    fluidForceScale: 1
+  fishMatrixSolver:
+    fluidForceScale: 1
   runtimeList: []
   runtimeMuscleList: []
   runtimeSpringList: []
@@ -359,7 +362,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 27190fc8009bee5448d6e40413ad49c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fishModel: {fileID: 2120106928}
   amplitudeParameter:
   - x: 0
     y: 1
@@ -370,16 +372,22 @@ MonoBehaviour:
     y: 0.075
   - x: 0
     y: 0.075
-  activations: []
+  fishData:
+    damping: 0.05
+    normalFace: []
+  fishSolver:
+    fluidForceScale: 1
   timeInterval:
     x: 0
-    y: 5
+    y: 10
   sampleSize: 15
   h: 0
   temperature: 1
   minTemperature: 0.0001
   alpha: 0.99
-  phaseScale: 0.5
   act: 0.5
-  testX: 0
-  testY: 0
+  current: 0
+  currentTrajactory: 0
+  currentState: 0
+  drawtestX: 0
+  drawtestY: 0
