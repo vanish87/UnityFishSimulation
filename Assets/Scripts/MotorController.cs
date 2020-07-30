@@ -25,32 +25,46 @@ namespace UnityFishSimulation
             this.solver = solver;
         }
     }*/
-
+    
     public class DiscreteFunction<XValue, YValue>
     {
         [SerializeField] protected CricleData<List<Tuple<XValue,YValue>>, int> valueMap;
         [SerializeField] protected Tuple<XValue, YValue> start;
         [SerializeField] protected Tuple<XValue, YValue> end;
         [SerializeField] protected int sampleNum;
+        
+        private static readonly List<Type> SupportedTypes = 
+            new List<Type>() { 
+                typeof(int), typeof(float), typeof(double), 
+                typeof(float2), typeof(float3), typeof(float4),
+                typeof(double2),typeof(double3),typeof(double4)
+            };
 
         protected virtual void InitValues()
         {
+            dynamic s = this.start.Item1;
+            dynamic e = this.end.Item1;
+
+            var h = (e - s) / this.sampleNum;
+
             this.AddValue(this.start);
             for (var i = 1; i < this.sampleNum - 1; ++i)
             {
-                this.AddValue(new Tuple<XValue, YValue>(default, default));
+                this.AddValue(new Tuple<XValue, YValue>(s + i * h, default(YValue)));
             }
             this.AddValue(this.end);
 
             LogTool.LogAssertIsTrue(this.valueMap.Current.Count == this.valueMap.Next.Count && this.valueMap.Current.Count == sampleNum, "Sample size inconstant");
         }
 
-        public DiscreteFunction(Tuple<XValue, YValue> start, Tuple<XValue, YValue> end, int sampleNum)
+
+        public DiscreteFunction(Tuple<XValue, YValue> start = null, Tuple<XValue, YValue> end = null, int sampleNum = 1)
         {
             LogTool.LogAssertIsTrue(sampleNum > 0, "Sample size should none 0");
+            LogTool.LogAssertIsTrue(SupportedTypes.Contains(typeof(XValue)), typeof(XValue) + " is not supported");
 
-            if (start == null) start = new Tuple<XValue, YValue>(default, default);
-            if (end == null) end = new Tuple<XValue, YValue>(default, default);
+            start = start ?? new Tuple<XValue, YValue>(default, default);
+            end = end ?? new Tuple<XValue, YValue>(default, default);
 
             this.valueMap = new CricleData<List<Tuple<XValue, YValue>>, int>(2);
             this.start = start;
@@ -79,6 +93,25 @@ namespace UnityFishSimulation
             var old = this.valueMap.Current[x];
             this.valueMap.Current[x] = new Tuple<XValue, YValue>(old.Item1, value);
         }
+        public YValue Evaluate(float t)
+        {
+            dynamic s = this.start.Item1;
+            dynamic e = this.end.Item1;
+
+            var range = e - s;
+            LogTool.LogAssertIsFalse(range == 0, "range is 0");
+
+            if (range == 0) return default;
+            var h = range / this.valueMap.Current.Count;
+
+            var index = (t % range) / h;
+            var from = Mathf.FloorToInt(index);
+            var to = Mathf.CeilToInt(index);
+            var yfrom = this.EvaluateIndex(from);
+            var yto = this.EvaluateIndex(to);
+
+            return math.lerp(yfrom, yto, index - from);
+        }
 
         public YValue EvaluateIndex(int index)
         {
@@ -91,82 +124,45 @@ namespace UnityFishSimulation
             this.valueMap.Current.Add(value);
             this.valueMap.Next.Add(value);
         }
-    }
 
-    public class F2XDiscreteFunction<Y> : DiscreteFunction<float, Y>
-    {
-        public F2XDiscreteFunction():base(default,default,1)
+        public YValue Devrivate(int index, XValue h)
         {
-
+            dynamic prev = this.EvaluateIndex(index - 1);
+            dynamic next = this.EvaluateIndex(index + 1);
+            dynamic dh = h;
+            return (prev + next) / (2 * dh);
         }
-        public F2XDiscreteFunction(Tuple<float, Y> start, Tuple<float, Y> end, int sampleNum):base(start, end, sampleNum)
+        public YValue Devrivate2(int index, XValue h)
         {
-
-        }
-        protected override void InitValues()
-        {
-            var h = (this.end.Item1 - this.start.Item1)/this.sampleNum;
-            this.AddValue(this.start);
-            for (var i = 1; i < this.sampleNum - 1; ++i)
-            {
-                this.AddValue(new Tuple<float, Y>(this.start.Item1 + i * h, default));
-            }
-            this.AddValue(this.end);
-
-            LogTool.LogAssertIsTrue(this.valueMap.Current.Count == this.valueMap.Next.Count && this.valueMap.Current.Count == sampleNum, "Sample size inconstant");
-
-        }
-
-        public virtual Y Lerp(Y from, Y to, float t) { return default; }
-
-        public Y Evaluate(float t)
-        {
-            var range = this.end.Item1 - this.start.Item1;
-            LogTool.LogAssertIsFalse(range == 0, "range is 0");
-
-            if (range == 0) return default;
-            var h = range / this.valueMap.Current.Count;
-
-            var index = (t % range) / h;
-            var from = Mathf.FloorToInt(index);
-            var to = Mathf.CeilToInt(index);
-            var yfrom = this.EvaluateIndex(from);
-            var yto = this.EvaluateIndex(to);
-
-            return this.Lerp(yfrom, yto, index - from);
+            dynamic prev = this.EvaluateIndex(index - 1);
+            dynamic next = this.EvaluateIndex(index + 1);
+            dynamic current = this.EvaluateIndex(index);
+            dynamic dh = h;
+            return (prev + next - (2 * current)) / (dh * dh);
         }
     }
-
-    public class F2FloatDiscreteFunction:F2XDiscreteFunction<float>
+    
+    public class X2FDiscreteFunction<X> : DiscreteFunction<X, float>
     {
-
-        public F2FloatDiscreteFunction(Tuple<float, float> start, Tuple<float, float> end, int sampleNum) : base(start, end, sampleNum)
+        public X2FDiscreteFunction(Tuple<X, float> start, Tuple<X, float> end, int sampleNum) : base(start, end, sampleNum)
         {
 
-        }
-        public override float Lerp(float from, float to, float t)
-        {
-            return math.lerp(from, to, t);
         }
         public void RandomNextValues()
         {
-            for(var i = 0; i < this.valueMap.Next.Count; ++i)
+            for (var i = 0; i < this.valueMap.Next.Count; ++i)
             {
                 var n = this.valueMap.Next[i].Item1;
-                this.valueMap.Next[i] = new Tuple<float, float>(n, UnityEngine.Random.value);
+                this.valueMap.Next[i] = new Tuple<X, float>(n, UnityEngine.Random.value);
             }
         }
-        public float Devrivate(int index, float h)
-        {
-            return (this.EvaluateIndex(index - 1) + this.EvaluateIndex(index + 1)) / (2 * h);
-        }
-        public float Devrivate2(int index, float h)
-        {
-            return (this.EvaluateIndex(index - 1) + this.EvaluateIndex(index + 1) - (2 * this.EvaluateIndex(index))) / (h * h);
-        }
+    }
+
+    public class FunctionDrawer
+    {
         public void OnGizmos(float3 offset)
         {
-            if (this.valueMap != null)
+            /*if (this.valueMap != null)
             {
                 using (new GizmosScope(Color.cyan, Matrix4x4.TRS(new Vector3(offset.x, offset.y, offset.z), Quaternion.identity, Vector3.one)))
                 {
@@ -177,31 +173,7 @@ namespace UnityFishSimulation
                         Gizmos.DrawLine(from, to);
                     }
                 }
-            }
-        }
-    }
-    public class F2Float2DiscreteFunction : F2XDiscreteFunction<float2>
-    {
-
-        public F2Float2DiscreteFunction(Tuple<float, float2> start, Tuple<float, float2> end, int sampleNum) : base(start, end, sampleNum)
-        {
-
-        }
-        public override float2 Lerp(float2 from, float2 to, float t)
-        {
-            return math.lerp(from, to, t);
-        }
-    }
-    public class F2Float3DiscreteFunction : F2XDiscreteFunction<float3>
-    {
-
-        public F2Float3DiscreteFunction(Tuple<float, float3> start, Tuple<float, float3> end, int sampleNum) : base(start, end, sampleNum)
-        {
-
-        }
-        public override float3 Lerp(float3 from, float3 to, float t)
-        {
-            return math.lerp(from, to, t);
+            }*/
         }
     }
 
@@ -236,8 +208,8 @@ namespace UnityFishSimulation
         [SerializeField] protected FishModelData fishData = new FishModelData();
         [SerializeField] protected FishEularSolver fishSolver = new FishEularSolver();
 
-        [SerializeField] protected Dictionary<Spring.Type, F2FloatDiscreteFunction> activations = new Dictionary<Spring.Type, F2FloatDiscreteFunction>();
-        [SerializeField] protected F2Float3DiscreteFunction trajectory;
+        [SerializeField] protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
+        [SerializeField] protected DiscreteFunction<float, float3> trajectory;
 
         [SerializeField] protected float2 timeInterval = new float2(0, 5);
         [SerializeField] protected int sampleSize = 15;
@@ -264,11 +236,11 @@ namespace UnityFishSimulation
             var end   = new Tuple<float, float>(this.timeInterval.y, 0.5f);
 
 
-            this.activations.Add(Spring.Type.MuscleFront, new F2FloatDiscreteFunction(start, end, this.sampleSize));
-            this.activations.Add(Spring.Type.MuscleMiddle, new F2FloatDiscreteFunction(start, end, this.sampleSize));
-            this.activations.Add(Spring.Type.MuscleBack, new F2FloatDiscreteFunction(start, end, this.sampleSize));
+            this.activations.Add(Spring.Type.MuscleFront, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
+            this.activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
+            this.activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
 
-            this.trajectory = new F2Float3DiscreteFunction(
+            this.trajectory = new DiscreteFunction<float, float3>(
                 new Tuple<float, float3>(this.timeInterval.x, 0), 
                 new Tuple<float, float3>(this.timeInterval.y, 0), 
                 this.sampleSize);
@@ -286,7 +258,7 @@ namespace UnityFishSimulation
                         this.fishData = GeometryFunctions.Load();
 
                         this.currentTrajactory = 0;
-                        this.trajectory = new F2Float3DiscreteFunction(
+                        this.trajectory = new DiscreteFunction<float, float3>(
                             new Tuple<float, float3>(this.timeInterval.x, 0),
                             new Tuple<float, float3>(this.timeInterval.y, 0),
                             this.sampleSize);
@@ -492,7 +464,7 @@ namespace UnityFishSimulation
                 var offset = new float3(10, 0, 0);
                 foreach (var activation in this.activations.Values)
                 {
-                    activation.OnGizmos(offset);
+                    //activation.OnGizmos(offset);
                     offset.y += 3;
                 }
 

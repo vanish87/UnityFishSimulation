@@ -14,7 +14,7 @@ namespace UnityFishSimulation
     public class FishModelData
     {
         [SerializeField, Range(0.01f, 1)] protected float damping = 0.05f;
-        protected Graph<MassPoint, Spring> fishGraph = new Graph<MassPoint, Spring>(23);
+        [SerializeField] protected Graph<MassPoint, Spring> fishGraph = new Graph<MassPoint, Spring>(23);
         [SerializeField] protected List<NormalFace> normalFace = new List<NormalFace>();
 
         public Graph<MassPoint, Spring> FishGraph { get => this.fishGraph; set => this.fishGraph = value; }
