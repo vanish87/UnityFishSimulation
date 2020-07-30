@@ -92,7 +92,7 @@ namespace UnityFishSimulation
         public virtual SimulatorSateRunning Running { get => SimulatorSateRunning.Instance; }
         public virtual SimulatorSateDone Done { get => SimulatorSateDone.Instance; }
 
-        public Simulator()
+        protected void Start()
         {
             this.Reset();
         }

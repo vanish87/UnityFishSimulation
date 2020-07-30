@@ -307,6 +307,7 @@ GameObject:
   - component: {fileID: 2120106929}
   - component: {fileID: 2120106928}
   - component: {fileID: 2120106930}
+  - component: {fileID: 2120106931}
   m_Layer: 0
   m_Name: Fish
   m_TagString: Untagged
@@ -372,22 +373,39 @@ MonoBehaviour:
     y: 0.075
   - x: 0
     y: 0.075
-  fishData:
-    damping: 0.05
-    normalFace: []
-  fishSolver:
-    fluidForceScale: 1
+  fishSimulator: {fileID: 2120106931}
   timeInterval:
     x: 0
-    y: 10
-  sampleSize: 15
+    y: 30
+  sampleSize: 30
   h: 0
   temperature: 1
   minTemperature: 0.0001
   alpha: 0.99
   act: 0.5
-  current: 0
-  currentTrajactory: 0
   currentState: 0
+  startNewLearning: 0
+  runningCount: 0
+  preView: 0
+  fileName: s30
   drawtestX: 0
   drawtestY: 0
+--- !u!114 &2120106931
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2120106927}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba92077a440bf1d41a332d4b3adb0ae2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  runMode: 0
+  solverType: 0
+  fish:
+    damping: 0.05
+    normalFace: []
+  from: 0
+  to: 0

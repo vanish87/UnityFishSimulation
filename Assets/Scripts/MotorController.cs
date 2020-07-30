@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
@@ -56,12 +57,9 @@ namespace UnityFishSimulation
             SADone,
         }
 
-
-        [SerializeField] protected FishModelData fishData = new FishModelData();
-        [SerializeField] protected FishEularSolver fishSolver = new FishEularSolver();
+        [SerializeField] protected FishSimulator fishSimulator;
 
         [SerializeField] protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
-        [SerializeField] protected DiscreteFunction<float, float3> trajectory;
 
         [SerializeField] protected float2 timeInterval = new float2(0, 5);
         [SerializeField] protected int sampleSize = 15;
@@ -74,9 +72,11 @@ namespace UnityFishSimulation
 
         [SerializeField, Range(0, 1)] protected float act = 0.5f;
 
-        [SerializeField] protected float current = 0;
-        [SerializeField] protected int currentTrajactory = 0;
         [SerializeField] protected SAState currentState = SAState.Start;
+        [SerializeField] protected bool startNewLearning = false;
+        [SerializeField] protected int runningCount = 0;
+        [SerializeField] protected bool preView = false;
+        [SerializeField] protected string fileName = "s30";
 
         protected void Start()
         {
@@ -87,57 +87,57 @@ namespace UnityFishSimulation
             var start = new Tuple<float, float>(this.timeInterval.x, 0.5f);
             var end   = new Tuple<float, float>(this.timeInterval.y, 0.5f);
 
-
             this.activations.Add(Spring.Type.MuscleFront, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
             this.activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
             this.activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
 
-            this.trajectory = new DiscreteFunction<float, float3>(
-                new Tuple<float, float3>(this.timeInterval.x, 0), 
-                new Tuple<float, float3>(this.timeInterval.y, 0), 
-                this.sampleSize);
 
-            this.fishData = GeometryFunctions.Load();            
+            if (this.startNewLearning == false) this.Load();
+
+            this.fishSimulator.SetStartEnd(start.Item1, end.Item1);
+            this.fishSimulator.SetActivations(this.activations);
+
+        }
+
+        protected void Load(string file = "Swimming")
+        {
+            var path = System.IO.Path.Combine(Application.streamingAssetsPath, file+ ".func");
+            if (File.Exists(path) == false) return;
+
+            this.activations = FileTool.Read<Dictionary<Spring.Type, X2FDiscreteFunction<float>>>(path);
+            LogTool.Log("Loaded " + path);
+        }
+
+        protected void Save(string file = "Swimming")
+        {
+            var path = System.IO.Path.Combine(Application.streamingAssetsPath, file + ".func");
+            FileTool.Write(path, this.activations);
+            LogTool.Log("Saved " + path);
         }
 
         protected void Update()
         {
+            if (Input.GetKeyDown(KeyCode.A)) this.Save(this.fileName);
+
             switch(this.currentState)
             {
                 case SAState.Start:
                     {
-                        this.current = 0;
-                        this.fishData = GeometryFunctions.Load();
-
-                        this.currentTrajactory = 0;
-                        this.trajectory = new DiscreteFunction<float, float3>(
-                            new Tuple<float, float3>(this.timeInterval.x, 0),
-                            new Tuple<float, float3>(this.timeInterval.y, 0),
-                            this.sampleSize);
-
                         this.temperature = 1;
-
                         this.currentState = SAState.FishTrajectorySimulating;
+                        this.fishSimulator.StartSimulation();
                     }
                     break;
                 case SAState.FishTrajectorySimulating:
                     {
-                        var end = this.timeInterval.y;
-                        if (this.current < end)
+                        if (this.preView == false)
                         {
-                            this.ApplyControlParameter(this.fishData, this.current);
-
-                            this.Simulate();
-                            this.current += Solver.dt;
-
-                            if(this.current > this.trajectory.GetValueX(this.currentTrajactory))
+                            while (!this.fishSimulator.IsSimulationDone())
                             {
-                                var dis = math.length(new float3(100, 0, 0) - this.fishData.Head.Position);
-                                this.trajectory.SetValueY(this.currentTrajactory, dis);
-                                this.currentTrajactory++;
+                                this.fishSimulator.ManualUpdate();
                             }
                         }
-                        else
+                        if (this.fishSimulator.IsSimulationDone())
                         {
                             this.currentState = SAState.SAEvaluating;
                         }
@@ -158,72 +158,19 @@ namespace UnityFishSimulation
                     break;
                 default:break;
             }
-
-
-            if(Input.GetKeyDown(KeyCode.A))
-            {
-                this.ApplyControlParameter(this.fishData, this.act);
-                this.Simulate();
-            }
         }
 
-        protected void Simulate()
-        {
-            this.fishSolver.Step(this.fishData, Solver.dt);
-        }
 
         protected void SimulateNext()
         {
-            this.trajectory.MoveToNext();
-            this.fishData = GeometryFunctions.Load();
+            this.fishSimulator.StartSimulation();
 
-            var s = this.timeInterval.x;
-            var e = this.timeInterval.y;
-            var c = 0;
-
-            while(s < e)
+            while (!this.fishSimulator.IsSimulationDone())
             {
-                this.ApplyControlParameter(this.fishData, s);
-                this.fishSolver.Step(this.fishData, Solver.dt);
-                s += Solver.dt;
-
-                if (s > this.trajectory.GetValueX(c))
-                {
-                    var dis = math.length(new float3(100, 0, 0) - this.fishData.Head.Position);
-                    this.trajectory.SetValueY(c, dis);
-                    c++;
-                }
+                this.fishSimulator.ManualUpdate();
             }
         }
 
-        protected void ApplyControlParameter(FishModelData fish, float current)
-        {
-            this.ApplyByType(fish, Spring.Type.MuscleFront, current);
-            this.ApplyByType(fish, Spring.Type.MuscleMiddle, current);
-            this.ApplyByType(fish, Spring.Type.MuscleBack, current);
-        }
-        protected void ApplyByType(FishModelData fish, Spring.Type type, float t)
-        {
-            var muscle = fish.GetSpringByType(new List<Spring.Type>() { type });
-            var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
-            var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
-            var activation = this.activations[type];
-
-
-            foreach (var l in muscleLeft)
-            {
-                //l.Activation = act;
-                //l.Activation = cos;// 
-                l.Activation = activation.Evaluate(t);
-            }
-            foreach (var r in muscleRight)
-            {
-                //r.Activation = 1 - act;
-                //r.Activation = 1 - cos;// 
-                r.Activation = 1 - activation.Evaluate(t);
-            }
-
-        }
 
         protected void StepSimulatedAnnealing()
         {
@@ -246,10 +193,14 @@ namespace UnityFishSimulation
                         a.MoveToPrev();
                     }
                 }
+                else
+                {
+                    this.Save(this.fileName);
+                }
 
                 //this.temperature = this.temperature/(1+this.alpha*this.temperature);
                 this.temperature *= this.alpha;
-
+                this.runningCount++;
                 Debug.Log("Current " + current + " Next " + next);
             }
         }
@@ -263,6 +214,8 @@ namespace UnityFishSimulation
             else
             {
                 var p = math.pow(math.E, -(next - current) / this.temperature);
+                LogTool.Log("p is " + p);
+
                 if (p > UnityEngine.Random.value)
                 {
                     return true;
@@ -276,18 +229,22 @@ namespace UnityFishSimulation
 
         protected float GetCurrentE()
         {
-            var mu1 = 1f;
-            var mu2 = 1f;
+            var mu1 = 0.3f;
+            var mu2 = 0.7f;
+
+            var v1 = 0.5f;
+            var v2 = 0.5f;
 
             var E = 0f;
+
+            var trajactory = this.fishSimulator.GetOutput().trajactory;
+            var velocity = this.fishSimulator.GetOutput().velocity;
 
             for (int i = 0; i < this.sampleSize; ++i)
             {
                 var Eu = 0f;
-                var Ev = math.length(this.trajectory.Evaluate(i) - new float3(100,0,0));
+                var Ev = math.length(trajactory.Evaluate(i) - new float3(100,0,0)) - trajactory.Evaluate(i).x;
 
-                var v1 = 1f;
-                var v2 = 1f;
 
                 var du = 0f;
                 var du2 = 0f;
@@ -328,7 +285,7 @@ namespace UnityFishSimulation
                 Gizmos.DrawSphere(new Vector3(drawtestX + 10, drawtestY), 0.1f);
             }
 
-            this.fishData.OnGizmos(GeometryFunctions.springColorMap);
+            this.fishSimulator?.Fish.OnGizmos(GeometryFunctions.springColorMap);
         }
 
     }
