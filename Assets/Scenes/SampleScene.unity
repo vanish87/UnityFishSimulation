@@ -377,8 +377,8 @@ MonoBehaviour:
     y: 50
   sampleSize: 30
   h: 0
-  temperature: 10000
-  minTemperature: 0.1
+  temperature: 1
+  minTemperature: 0.01
   alpha: 0.99
   successCount: 0
   currentE: 0
@@ -387,5 +387,6 @@ MonoBehaviour:
   startNewLearning: 0
   runningCount: 0
   fileName: s30
+  mode: 1
   drawtestX: 0
   drawtestY: 0

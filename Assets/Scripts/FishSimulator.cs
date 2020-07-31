@@ -116,7 +116,7 @@ namespace UnityFishSimulation
                 this.ApplyByType(obj.fish, Spring.Type.MuscleMiddle, obj.activations);
                 this.ApplyByType(obj.fish, Spring.Type.MuscleBack, obj.activations);
             }
-            protected void ApplyByType(FishModelData fish, Spring.Type type, Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations)
+            protected void ApplyByType(FishModelData fish, Spring.Type type, Dictionary<Spring.Type, MotorController.RandomX2FDiscreteFunction> activations)
             {
                 var t = this.current;
                 var muscle = fish.GetSpringByType(new List<Spring.Type>() { type });
@@ -152,7 +152,7 @@ namespace UnityFishSimulation
         [SerializeField] internal protected float from = 0;
         [SerializeField] internal protected float to = 0;
 
-        internal protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations;
+        internal protected Dictionary<Spring.Type, MotorController.RandomX2FDiscreteFunction> activations;
 
         public FishModelData Fish 
         {
@@ -175,7 +175,7 @@ namespace UnityFishSimulation
 
         public Output GetOutput() 
         {
-            return this.runner.GetOutput();
+            return this.runner?.GetOutput();
         }
 
         public void SetStartEnd(float from, float to) 
@@ -184,7 +184,7 @@ namespace UnityFishSimulation
             this.to = to;
         }
 
-        public void SetActivations(Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations)
+        public void SetActivations(Dictionary<Spring.Type, MotorController.RandomX2FDiscreteFunction> activations)
         {
             this.activations = activations;
         }
