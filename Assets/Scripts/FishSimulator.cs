@@ -5,6 +5,7 @@ using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityTools;
+using UnityTools.Common;
 using UnityTools.Math;
 
 namespace UnityFishSimulation
@@ -90,20 +91,20 @@ namespace UnityFishSimulation
         {
             new public static FishSimulatorRunningState Instance { get => instance; }
             new protected static FishSimulatorRunningState instance = new FishSimulatorRunningState();
-            internal override void Enter(Simulator<Output, Runner> obj)
+            internal override void Enter(ObjectStateMachine obj)
             {
                 base.Enter(obj);
 
                 var fishSim = obj as FishSimulator;
                 fishSim.ResetData();
             }
-            internal override void Excute(Simulator<Output, Runner> obj)
+            internal override void Excute(ObjectStateMachine obj)
             {
                 var fishSim = obj as FishSimulator;
                 var dt = Solver.dt;
                 this.ApplyControlParameter(fishSim);
 
-                obj.runner?.Step(dt);
+                fishSim.runner?.Step(dt);
                 this.current += dt;
 
                 if (this.current > fishSim.to) fishSim.ChangeState(SimulatorSateDone.Instance);
@@ -121,20 +122,23 @@ namespace UnityFishSimulation
                 var muscle = fish.GetSpringByType(new List<Spring.Type>() { type });
                 var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
                 var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
-                var activation = activations[type];
 
+                if (activations.ContainsKey(type))
+                {
+                    var activation = activations[type];
 
-                foreach (var l in muscleLeft)
-                {
-                    //l.Activation = act;
-                    //l.Activation = cos;// 
-                    l.Activation = activation.Evaluate(t);
-                }
-                foreach (var r in muscleRight)
-                {
-                    //r.Activation = 1 - act;
-                    //r.Activation = 1 - cos;// 
-                    r.Activation = 1 - activation.Evaluate(t);
+                    foreach (var l in muscleLeft)
+                    {
+                        //l.Activation = act;
+                        //l.Activation = cos;// 
+                        l.Activation = activation.Evaluate(t);
+                    }
+                    foreach (var r in muscleRight)
+                    {
+                        //r.Activation = 1 - act;
+                        //r.Activation = 1 - cos;// 
+                        r.Activation = 1 - activation.Evaluate(t);
+                    }
                 }
 
             }
@@ -154,7 +158,7 @@ namespace UnityFishSimulation
         {
             get
             {
-                if (this.fish == null) this.fish = GeometryFunctions.Load();
+                this.fish = this.fish??GeometryFunctions.Load();
                 return this.fish;
             }
         }
@@ -166,10 +170,8 @@ namespace UnityFishSimulation
 
         public bool IsSimulationDone()
         {
-            return this.currentState_ == this.Done;
+            return this.currentState == this.Done;
         }
-
-        public void ManualUpdate() { this.Update(); }
 
         public Output GetOutput() 
         {

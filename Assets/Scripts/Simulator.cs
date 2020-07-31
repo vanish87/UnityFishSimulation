@@ -14,22 +14,22 @@ namespace UnityFishSimulation
     }
 
     [System.Serializable]
-    public class Simulator<Output, Runner> : ObjectStateMachine<Simulator<Output, Runner>> where Runner : IRunable<Output>
+    public class Simulator<Output, Runner> : ObjectStateMachine where Runner : IRunable<Output>
     {
         [System.Serializable]
-        public class SimulatorSateReady : StateBase<Simulator<Output, Runner>>
+        public class SimulatorSateReady : StateBase<ObjectStateMachine>
         {
             public static SimulatorSateReady Instance { get => instance; }
             protected static SimulatorSateReady instance = new SimulatorSateReady();
 
-            internal override void Enter(Simulator<Output, Runner> obj)
+            internal override void Enter(ObjectStateMachine obj)
             {
             }
-            internal override void Excute(Simulator<Output, Runner> obj)
+            internal override void Excute(ObjectStateMachine obj)
             {
             }
 
-            internal override void Leave(Simulator<Output, Runner> obj)
+            internal override void Leave(ObjectStateMachine obj)
             {
 
             }
@@ -37,30 +37,33 @@ namespace UnityFishSimulation
         }
 
         [System.Serializable]
-        public class SimulatorSateRunning : StateBase<Simulator<Output, Runner>>
+        public class SimulatorSateRunning : StateBase<ObjectStateMachine>
         {
             public static SimulatorSateRunning Instance { get => instance; }
             protected static SimulatorSateRunning instance = new SimulatorSateRunning();
 
-            internal override void Enter(Simulator<Output, Runner> obj)
+            internal override void Enter(ObjectStateMachine obj)
             {
-                obj.runner?.Start();
+                var sim = obj as Simulator<Output, Runner>;
+                sim.runner?.Start();
             }
-            internal override void Excute(Simulator<Output, Runner> obj)
+            internal override void Excute(ObjectStateMachine obj)
             {
-                obj.runner?.Step(Solver.dt);
+                var sim = obj as Simulator<Output, Runner>;
+                sim.runner?.Step(Solver.dt);
             }
 
-            internal override void Leave(Simulator<Output, Runner> obj)
+            internal override void Leave(ObjectStateMachine obj)
             {
-                obj.runner?.End();
+                var sim = obj as Simulator<Output, Runner>;
+                sim.runner?.End();
             }
         }
 
         public class SimulatorSateRunningTimer : SimulatorSateRunning
         {
             protected float current = 0;
-            internal override void Enter(Simulator<Output, Runner> obj)
+            internal override void Enter(ObjectStateMachine obj)
             {
                 base.Enter(obj);
                 this.current = 0;
@@ -68,19 +71,19 @@ namespace UnityFishSimulation
         }
 
         [System.Serializable]
-        public class SimulatorSateDone : StateBase<Simulator<Output, Runner>>
+        public class SimulatorSateDone : StateBase<ObjectStateMachine>
         {
             public static SimulatorSateDone Instance { get => instance; }
             protected static SimulatorSateDone instance = new SimulatorSateDone();
 
-            internal override void Enter(Simulator<Output, Runner> obj)
+            internal override void Enter(ObjectStateMachine obj)
             {
             }
-            internal override void Excute(Simulator<Output, Runner> obj)
+            internal override void Excute(ObjectStateMachine obj)
             {
             }
 
-            internal override void Leave(Simulator<Output, Runner> obj)
+            internal override void Leave(ObjectStateMachine obj)
             {
 
             }
@@ -92,7 +95,7 @@ namespace UnityFishSimulation
         public virtual SimulatorSateRunning Running { get => SimulatorSateRunning.Instance; }
         public virtual SimulatorSateDone Done { get => SimulatorSateDone.Instance; }
 
-        protected void Start()
+        public Simulator() : base()
         {
             this.Reset();
         }

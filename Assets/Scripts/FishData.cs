@@ -4,6 +4,7 @@ using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityTools;
 using UnityTools.Common;
 using UnityTools.Debuging;
 using UnityTools.Debuging.EditorTool;
@@ -90,7 +91,7 @@ namespace UnityFishSimulation
 
     public static class GeometryFunctions
     {
-
+        public static FishModelData fish;
         public static Dictionary<Spring.Type, Color> springColorMap = new Dictionary<Spring.Type, Color>()
         {
             {Spring.Type.Cross , Color.gray },
@@ -108,9 +109,11 @@ namespace UnityFishSimulation
         public static FishModelData Load(string fileName = "fish.model")
         {
             var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
-            var ret = FileTool.Read<FishModelData>(path);
-            LogTool.Log("Loaded " + path);
-            return ret;
+
+            if(fish == null) LogTool.Log("Loaded " + path);
+            fish = fish??FileTool.Read<FishModelData>(path);
+
+            return fish.DeepCopy();
         }
 
         public static void InitNewFishModel(FishModelData fish)
@@ -130,24 +133,26 @@ namespace UnityFishSimulation
             var m3 = 0.165f;
             var m4 = 11.0f;
 
+            var width = 0;
+
             SetNode(n[0], new float3(0, 0, 0), m2);
 
-            SetNode(n[1], new float3(-5,  2,  2), m1);
-            SetNode(n[2], new float3(-5,  2, -2), m1);
-            SetNode(n[3], new float3(-5, -2, -2), m1);
-            SetNode(n[4], new float3(-5, -2,  2), m1);
+            SetNode(n[1], new float3(-5,  2,  2 + width), m1);
+            SetNode(n[2], new float3(-5,  2, -2 - width), m1);
+            SetNode(n[3], new float3(-5, -2, -2 - width), m1);
+            SetNode(n[4], new float3(-5, -2,  2 + width), m1);
 
 
-            SetNode(n[5], new float3(-10,  3,  3), m4);
-            SetNode(n[6], new float3(-10,  3, -3), m4);
-            SetNode(n[7], new float3(-10, -3, -3), m4);
-            SetNode(n[8], new float3(-10, -3,  3), m4);
+            SetNode(n[5], new float3(-10,  3,  3 + width), m4);
+            SetNode(n[6], new float3(-10,  3, -3 - width), m4);
+            SetNode(n[7], new float3(-10, -3, -3 - width), m4);
+            SetNode(n[8], new float3(-10, -3,  3 + width), m4);
 
 
-            SetNode(n[9], new float3(-15,   2,  2), m1);
-            SetNode(n[10], new float3(-15,  2, -2), m1);
-            SetNode(n[11], new float3(-15, -2, -2), m1);
-            SetNode(n[12], new float3(-15, -2,  2), m1);
+            SetNode(n[9], new float3(-15,   2,  2 + width * 0.5f), m1);
+            SetNode(n[10], new float3(-15,  2, -2 - width * 0.5f), m1);
+            SetNode(n[11], new float3(-15, -2, -2 - width * 0.5f), m1);
+            SetNode(n[12], new float3(-15, -2,  2 + width * 0.5f), m1);
 
 
             SetNode(n[13], new float3(-20,  1,  1), m2);
@@ -174,11 +179,11 @@ namespace UnityFishSimulation
 
         public static void InitNormals(FishModelData fish)
         {
-            /*
+            
             AddNormalFace(fish, 0, 1, 2);
             AddNormalFace(fish, 0, 2, 3);
             AddNormalFace(fish, 0, 3, 4);
-            AddNormalFace(fish, 0, 4, 1);*/
+            AddNormalFace(fish, 0, 4, 1);
 
             AddNormalFace(fish, 1, 5, 6, 2);
             AddNormalFace(fish, 2, 6, 7, 3);
