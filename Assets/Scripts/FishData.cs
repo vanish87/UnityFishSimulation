@@ -70,21 +70,21 @@ namespace UnityFishSimulation
                         edge.OnGizmos();
                     }
                 }
-            }
-            foreach (var n in this.FishGraph.Nodes)
-            {
-                n.OnGizmos(50 * Unit.WorldMMToUnityUnit);
-                //Gizmos.DrawLine(n.Position, n.Position + n.Velocity);
-            }
+                foreach (var n in this.FishGraph.Nodes)
+                {
+                    n.OnGizmos(50 * Unit.WorldMMToUnityUnit);
+                    //Gizmos.DrawLine(n.Position, n.Position + n.Velocity);
+                }
 
-            foreach (var n in this.FishNormalFace) n.OnGizmos(200 * Unit.WorldMMToUnityUnit);
+                foreach (var n in this.FishNormalFace) n.OnGizmos(200 * Unit.WorldMMToUnityUnit);
 
-            //Gizmos.DrawLine(Vector3.zero, this.totalForce);
+                //Gizmos.DrawLine(Vector3.zero, this.totalForce);
 
-            using (new GizmosScope(Color.red, Matrix4x4.identity))
-            {
-                Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Direction);
-                Gizmos.DrawLine(this.Head.Position, this.Head.Position + this.Velocity);
+                using (new GizmosScope(Color.red, Matrix4x4.identity))
+                {
+                    Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Direction);
+                    Gizmos.DrawLine(this.Head.Position, this.Head.Position + this.Velocity);
+                }
             }
         }
     }
@@ -118,7 +118,7 @@ namespace UnityFishSimulation
 
         public static void InitNewFishModel(FishModelData fish)
         {
-            fish.FishGraph.AdjMatrix.Clean();
+            fish.FishGraph.AdjMatrix.Clear();
             InitNodes(fish);
             InitSprings(fish);
             InitNormals(fish);

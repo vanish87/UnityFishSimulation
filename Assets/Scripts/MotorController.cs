@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityTools.Common;
 using UnityTools.Debuging;
-using UnityTools.Debuging.EditorTool;
 using UnityTools.Math;
 
 namespace UnityFishSimulation
@@ -204,7 +201,7 @@ namespace UnityFishSimulation
                         if (shouldContinue)
                         {
                             var next = this.GetCurrentE();
-                            Debug.Log("Current " + this.currentE + " Next " + next);
+                            //Debug.Log("Current " + this.currentE + " Next " + next);
 
                             if (this.ShouldUseNext(this.currentE, next))
                             {
@@ -261,11 +258,11 @@ namespace UnityFishSimulation
 
         protected float GetCurrentE()
         {
-            var mu1 = 0.5f;
-            var mu2 = 0.5f;
+            var mu1 = 0.8f;
+            var mu2 = 0.2f;
 
-            var v1 = 0.5f;
-            var v2 = 0.05f;
+            var v1 = 0.01f;
+            var v2 = 1f;
 
             var E = 0f;
 
@@ -291,7 +288,7 @@ namespace UnityFishSimulation
                     du2 += dev2 * dev2;
                 }
 
-                Eu = -0.5f * (v1 * du + v2 * du2);
+                Eu = 0.5f * (v1 * du + v2 * du2);
 
                 E += mu1 * Eu + mu2 * Ev;
             }
