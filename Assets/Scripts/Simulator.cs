@@ -50,7 +50,7 @@ namespace UnityFishSimulation
             internal override void Excute(ObjectStateMachine obj)
             {
                 var sim = obj as Simulator<Output, Runner>;
-                sim.runner?.Step(Solver.dt);
+                sim.runner?.Step(FishSimulator.dt);
             }
 
             internal override void Leave(ObjectStateMachine obj)

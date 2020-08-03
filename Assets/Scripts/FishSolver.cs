@@ -4,65 +4,18 @@ using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityTools.Algorithm;
 using UnityTools.Common;
 
 namespace UnityFishSimulation
 {
     public interface FishSolver
     {
-        void Step(FishModelData fish, float dt = Solver.dt);
+        void Step(FishModelData fish, float dt = FishSimulator.dt);
         void PreSolve(FishModelData fish);
         void ApplyForces(FishModelData fish);
         void Intergrate(FishModelData fish, float dt);
         void PostSolve(FishModelData fish);
-    }
-
-    public static class Solver
-    {
-        public const float dt = 0.055f;
-
-        public static Matrix<float3> SolverFS(Matrix<float3> L, Matrix<float3> b)
-        {
-            var dim = L.Size;
-            Assert.IsTrue(dim.x == b.Size.x);
-
-            //Ly = b
-            var y = new Matrix<float3>(dim.x, 1);
-
-            var m = dim.x;
-            for (var i = 0; i < m; ++i)
-            {
-                var sum = float3.zero;
-                for (var j = 0; j < m - 1; ++j)
-                {
-                    sum += L[i, j] * y[j, 0];
-                }
-                y[i, 0] = (b[i, 0] + sum) / L[i, i];
-            }
-
-            return y;
-        }
-        public static Matrix<float3> SolverBS(Matrix<float3> U, Matrix<float3> y)
-        {
-            var dim = U.Size;
-            Assert.IsTrue(dim.x == y.Size.x);
-
-            //Ux = y
-            var x = new Matrix<float3>(dim.x, 1);
-
-            var n = dim.x;
-            for (var i = 0; i < n; ++i)
-            {
-                var sum = float3.zero;
-                for (var j = i; j < n; ++j)
-                {
-                    sum += U[i, j] * x[j, 0];
-                }
-                x[i, 0] = (y[i, 0] - sum) / U[i, i];
-            }
-
-            return x;
-        }
     }
 
     [System.Serializable]
@@ -186,7 +139,7 @@ namespace UnityFishSimulation
             var nodes = fish.FishGraph.Nodes.ToList();
 
             var At = new Matrix<float3>(dim.x, dim.y);
-            var Gt = new Matrix<float3>(dim.x, 1);
+            var Gt = new Vector<float3>(dim.x);
 
             foreach (var s_ij in fish.FishGraph.Edges)
             {
@@ -200,13 +153,13 @@ namespace UnityFishSimulation
                 var n_ij = GetN(ni, nj, s_ij.C, s_ij.K, s_ij.CurrentL);
                 var r_ij = nj.Position - ni.Position;
 
-                At[i, i] = At[i, i] + n_ij * Solver.dt;
-                At[j, j] = At[j, j] + n_ij * Solver.dt;
+                At[i, i] = At[i, i] + n_ij * FishSimulator.dt;
+                At[j, j] = At[j, j] + n_ij * FishSimulator.dt;
 
-                At[i, j] = At[j, i] = -n_ij * Solver.dt;
+                At[i, j] = At[j, i] = -n_ij * FishSimulator.dt;
 
-                Gt[i, 0] = Gt[i, 0] + n_ij * r_ij;
-                Gt[j, 0] = Gt[j, 0] - n_ij * r_ij;
+                Gt[i] = Gt[i] + n_ij * r_ij;
+                Gt[j] = Gt[j] - n_ij * r_ij;
             }
 
 
@@ -216,8 +169,8 @@ namespace UnityFishSimulation
                 var mi = nodes[i].Mass;
                 var fi = nodes[i].Force;
                 var vi = nodes[i].Velocity;
-                At[i, i] = At[i, i] + mi / Solver.dt;
-                Gt[i, 0] = Gt[i, 0] + fi + (mi / Solver.dt) * vi;
+                At[i, i] = At[i, i] + mi / FishSimulator.dt;
+                Gt[i] = Gt[i] + fi + (mi / FishSimulator.dt) * vi;
             }
 
 
@@ -243,7 +196,7 @@ namespace UnityFishSimulation
             //D-1Q
             for (var i = 0; i < dim.x; ++i)
             {
-                Q[i, 0] *= 1f / D[i, i];
+                Q[i] *= 1f / D[i, i];
             }
             //this.Print(Q, "Q_1", true);
 
@@ -253,8 +206,8 @@ namespace UnityFishSimulation
 
             foreach (var n in fish.FishGraph.Nodes)
             {
-                n.Velocity = X_dot[n.Index, 0];
-                n.Position += n.Velocity * Solver.dt;
+                n.Velocity = X_dot[n.Index];
+                n.Position += n.Velocity * FishSimulator.dt;
             }
         }
 

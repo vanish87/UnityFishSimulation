@@ -12,6 +12,7 @@ namespace UnityFishSimulation
 {
     public class FishSimulator : Simulator<FishSimulator.Output, FishSimulator.Runner>
     {
+        public const float dt = 0.055f;
         public enum RunMode
         {
             PerStep,
@@ -101,7 +102,7 @@ namespace UnityFishSimulation
             internal override void Excute(ObjectStateMachine obj)
             {
                 var fishSim = obj as FishSimulator;
-                var dt = Solver.dt;
+                var dt = FishSimulator.dt;
                 this.ApplyControlParameter(fishSim);
 
                 fishSim.runner?.Step(dt);
