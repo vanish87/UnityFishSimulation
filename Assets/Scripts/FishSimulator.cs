@@ -5,122 +5,68 @@ using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityTools;
-using UnityTools.Common;
+using UnityTools.Algorithm;
 using UnityTools.Math;
 
 namespace UnityFishSimulation
 {
-    public class FishSimulator : Simulator<FishSimulator.Output, FishSimulator.Runner>
+    public class FishSimulator : Simulator
     {
-        public const float dt = 0.055f;
         public enum RunMode
         {
             PerStep,
             FullInterval,
         }
-        public enum SolverType
+
+        public class Problem : IProblem
         {
-            Eular,
-            Matrix,
-        }
-        public class Runner : IRunable<Output>
-        {
-            protected DiscreteFunction<float, float3> trajactory;
-            protected DiscreteFunction<float, float3> velocity;
-            protected float current = 0;
-            protected int currentIndex = 0;
+            public enum SolverType
+            {
+                Eular,
+                Matrix,
+            }
+            //[SerializeField] protected RunMode runMode = RunMode.PerStep;
+            protected SolverType solverType = SolverType.Eular;
+
             protected FishModelData fish;
             protected FishSolver solver;
 
-            public Runner(FishModelData fish, FishSolver solver, float from, float to)
+            protected Dictionary<Spring.Type, FishSAOptimizer.FishSA.RandomX2FDiscreteFunction> activations;
+
+            public FishModelData FishData { get => this.fish; }
+            public float From { get => this.activations.FirstOrDefault().Value.Start.Item1; }
+            public float To { get => this.activations.FirstOrDefault().Value.End.Item1; }
+            public int SampleNum { get => this.activations.FirstOrDefault().Value.SampleNum; }
+
+            public Problem(SolverType type, Dictionary<Spring.Type, FishSAOptimizer.FishSA.RandomX2FDiscreteFunction> activations)
             {
-                this.fish = fish;
-                this.solver = solver;
-
-                var start = new Tuple<float, float3>(from, 0);
-                var end = new Tuple<float, float3>(to, 0);
-                this.trajactory = new DiscreteFunction<float, float3>(start, end, 30);
-                this.velocity = new DiscreteFunction<float, float3>(start, end, 30);
-
-                this.current = 0;
-                this.currentIndex = 0;
+                this.solverType = type;
+                this.activations = activations;
             }
 
-            public void Start()
+            protected internal void ResetData()
             {
-                this.trajactory.ResetValues();
-                this.velocity.ResetValues();
-                this.current = 0;
-                this.currentIndex = 0;
-            }
-            public void End()
-            {
-            }
-
-            public void Step(float dt)
-            {
-                this.solver.Step(this.fish, dt);
-                this.current += dt;
-                this.UpdateOutput();
-            }
-
-            public Output GetOutput()
-            {
-                return new Output() { trajactory = this.trajactory ,velocity = this.velocity};
-            }
-
-
-            protected void UpdateOutput()
-            {
-                if(this.current > this.trajactory.GetValueX(this.currentIndex))
+                this.fish = GeometryFunctions.Load().DeepCopy();
+                if (this.solverType == SolverType.Eular)
                 {
-                    this.trajactory.SetValueY(this.currentIndex, this.fish.Head.Position);
-                    this.velocity.SetValueY(this.currentIndex, this.fish.Velocity);
-                    this.currentIndex++;
+                    this.solver = new FishEularSolver();
+                }
+                else
+                {
+                    this.solver = new FishMatrixSolver();
                 }
             }
-        }
 
-        public class Output
-        {
-            public DiscreteFunction<float, float3> trajactory;
-            public DiscreteFunction<float, float3> velocity;
-        }
-
-
-        public class FishSimulatorRunningState : SimulatorSateRunningTimer
-        {
-            new public static FishSimulatorRunningState Instance { get => instance; }
-            new protected static FishSimulatorRunningState instance = new FishSimulatorRunningState();
-            internal override void Enter(ObjectStateMachine obj)
+            internal protected void Step()
             {
-                base.Enter(obj);
-
-                var fishSim = obj as FishSimulator;
-                fishSim.ResetData();
-            }
-            internal override void Excute(ObjectStateMachine obj)
-            {
-                var fishSim = obj as FishSimulator;
-                var dt = FishSimulator.dt;
-                this.ApplyControlParameter(fishSim);
-
-                fishSim.runner?.Step(dt);
-                this.current += dt;
-
-                if (this.current > fishSim.to) fishSim.ChangeState(SimulatorSateDone.Instance);
+                //TODO move solver to FishSimulator class
+                this.solver.Step(this.fish, Delta.dt);
             }
 
-            protected void ApplyControlParameter(FishSimulator obj)
+            internal protected void ApplyActivations(Spring.Type type, IDelta dt)
             {
-                this.ApplyByType(obj.fish, Spring.Type.MuscleFront, obj.activations);
-                this.ApplyByType(obj.fish, Spring.Type.MuscleMiddle, obj.activations);
-                this.ApplyByType(obj.fish, Spring.Type.MuscleBack, obj.activations);
-            }
-            protected void ApplyByType(FishModelData fish, Spring.Type type, Dictionary<Spring.Type, MotorController.RandomX2FDiscreteFunction> activations)
-            {
-                var t = this.current;
-                var muscle = fish.GetSpringByType(new List<Spring.Type>() { type });
+                var t = (dt as Delta).current;
+                var muscle = this.fish.GetSpringByType(new List<Spring.Type>() { type });
                 var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
                 var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
 
@@ -141,69 +87,111 @@ namespace UnityFishSimulation
                         r.Activation = 1 - activation.Evaluate(t);
                     }
                 }
+            }
 
+            internal protected bool IsTimePassed(float time)
+            {
+                return time > this.To;
+            }
+        }
+        public class Solution : ISolution
+        {
+            protected DiscreteFunction<float, float3> trajactory;
+            protected DiscreteFunction<float, float3> velocity;
+            protected int currentIndex;
+
+            public Solution(float from, float to, int sampleNum)
+            {
+                var start = new Tuple<float, float3>(from, float3.zero);
+                var end = new Tuple<float, float3>(to, float3.zero);
+                trajactory = new DiscreteFunction<float, float3>(start, end, sampleNum);
+                velocity = new DiscreteFunction<float, float3>(start, end, sampleNum);
+                currentIndex = 0;
+            }
+
+            public void UpdateSolution(Problem problem, Delta dt)
+            {
+                if (dt.current > this.trajactory.GetValueX(this.currentIndex))
+                {
+                    this.trajactory.SetValueY(this.currentIndex, problem.FishData.Head.Position);
+                    this.velocity.SetValueY(this.currentIndex, problem.FishData.Velocity);
+                    this.currentIndex++;
+                }
             }
         }
 
-        [SerializeField] protected RunMode runMode = RunMode.PerStep;
-        [SerializeField] protected SolverType solverType = SolverType.Eular;
-
-        [SerializeField] protected FishModelData fish;
-        [SerializeField] protected FishSolver solver;
-        [SerializeField] internal protected float from = 0;
-        [SerializeField] internal protected float to = 0;
-
-        internal protected Dictionary<Spring.Type, MotorController.RandomX2FDiscreteFunction> activations;
-
-        public FishModelData Fish 
+        public class Delta : IDelta
         {
-            get
+            public const float dt = 0.055f;
+            public float current;
+            public void Reset()
             {
-                this.fish = this.fish??GeometryFunctions.Load();
-                return this.fish;
+                this.current = 0;
             }
+
+            public void Step()
+            {
+                this.current += dt;
+            }
+        }
+
+
+        public FishSimulator(IProblem problem, IDelta dt) : base(problem, dt)
+        {
+
         }
 
         public void StartSimulation()
         {
+            this.ResetData();
             this.ChangeState(this.Running);
+        }
+        public void ResetData()
+        {
+            var p = this.problem as Problem;
+            p.ResetData();
+
+            this.currentSolution = new Solution(p.From, p.To, p.SampleNum);
         }
 
         public bool IsSimulationDone()
         {
             return this.currentState == this.Done;
+        }         
+
+        public override bool IsSolutionAcceptable(ISolution solution)
+        {
+            var d = this.dt as Delta;
+            var p = this.problem as Problem;
+            return p.IsTimePassed(d.current);
         }
 
-        public Output GetOutput() 
+        public override ISolution Solve(IProblem problem)
         {
-            return this.runner?.GetOutput();
+            var p = problem as Problem;
+            var d = this.dt as Delta;
+            var sol = this.CurrentSolution as Solution;
+            p.ApplyActivations(Spring.Type.MuscleFront, dt);
+            p.ApplyActivations(Spring.Type.MuscleMiddle, dt);
+            p.ApplyActivations(Spring.Type.MuscleBack, dt);
+
+            p.Step();
+
+            sol.UpdateSolution(p, d);
+
+            return this.CurrentSolution;
         }
 
-        public void SetStartEnd(float from, float to) 
-        {
-            this.from = from;
-            this.to = to;
-        }
 
-        public void SetActivations(Dictionary<Spring.Type, MotorController.RandomX2FDiscreteFunction> activations)
-        {
-            this.activations = activations;
-        }
 
-        public override SimulatorSateRunning Running { get => FishSimulatorRunningState.Instance; }
 
-        protected internal void ResetData()
+        public void OnGizmos()
         {
-            this.fish = GeometryFunctions.Load().DeepCopy();
-            if (this.solverType == SolverType.Eular)
+            if (this.problem != null)
             {
-                this.solver = new FishEularSolver();
+                var p = this.problem as Problem;
+                p.FishData?.OnGizmos(GeometryFunctions.springColorMap);
             }
-            else
-            {
-                this.solver = new FishMatrixSolver();
-            }
-            this.runner = new Runner(this.fish, this.solver, this.from, this.to);
         }
     }
 }

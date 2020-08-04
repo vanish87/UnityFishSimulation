@@ -11,7 +11,7 @@ namespace UnityFishSimulation
 {
     public interface FishSolver
     {
-        void Step(FishModelData fish, float dt = FishSimulator.dt);
+        void Step(FishModelData fish, float dt);
         void PreSolve(FishModelData fish);
         void ApplyForces(FishModelData fish);
         void Intergrate(FishModelData fish, float dt);
@@ -153,10 +153,10 @@ namespace UnityFishSimulation
                 var n_ij = GetN(ni, nj, s_ij.C, s_ij.K, s_ij.CurrentL);
                 var r_ij = nj.Position - ni.Position;
 
-                At[i, i] = At[i, i] + n_ij * FishSimulator.dt;
-                At[j, j] = At[j, j] + n_ij * FishSimulator.dt;
+                At[i, i] = At[i, i] + n_ij * dt;
+                At[j, j] = At[j, j] + n_ij * dt;
 
-                At[i, j] = At[j, i] = -n_ij * FishSimulator.dt;
+                At[i, j] = At[j, i] = -n_ij * dt;
 
                 Gt[i] = Gt[i] + n_ij * r_ij;
                 Gt[j] = Gt[j] - n_ij * r_ij;
@@ -169,8 +169,8 @@ namespace UnityFishSimulation
                 var mi = nodes[i].Mass;
                 var fi = nodes[i].Force;
                 var vi = nodes[i].Velocity;
-                At[i, i] = At[i, i] + mi / FishSimulator.dt;
-                Gt[i] = Gt[i] + fi + (mi / FishSimulator.dt) * vi;
+                At[i, i] = At[i, i] + mi / dt;
+                Gt[i] = Gt[i] + fi + (mi / dt) * vi;
             }
 
 
@@ -207,7 +207,7 @@ namespace UnityFishSimulation
             foreach (var n in fish.FishGraph.Nodes)
             {
                 n.Velocity = X_dot[n.Index];
-                n.Position += n.Velocity * FishSimulator.dt;
+                n.Position += n.Velocity * dt;
             }
         }
 

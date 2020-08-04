@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityTools.Common;
 using UnityTools.Debuging;
 using UnityTools.Math;
+using static UnityFishSimulation.FishSAOptimizer.FishSA;
 
 namespace UnityFishSimulation
 {        
@@ -62,29 +63,12 @@ namespace UnityFishSimulation
             Preview,
         }
 
-        [System.Serializable]
-        public class RandomX2FDiscreteFunction : X2FDiscreteFunction<float>
-        {
-            public RandomX2FDiscreteFunction(Tuple<float, float> start, Tuple<float, float> end, int sampleNum) : base(start, end, sampleNum)
-            {
-
-            }
-
-            public override void RandomNextValues()
-            {
-                var range = 1;
-                for (var i = 0; i < this.valueMap.Next.Count; ++i)
-                {
-                    var n = this.valueMap.Next[i].Item1;
-                    var y = this.valueMap.Next[i].Item2;
-                    this.valueMap.Next[i] = new Tuple<float, float>(n, math.saturate(y + (UnityEngine.Random.value - 0.5f) * 2 * range));
-                }
-            }
-        }
+        
 
         [SerializeField] protected FishSimulator fishSimulator;
 
-        [SerializeField] protected Dictionary<Spring.Type, RandomX2FDiscreteFunction> activations = new Dictionary<Spring.Type, RandomX2FDiscreteFunction>();
+        [SerializeField] protected Dictionary<Spring.Type, RandomX2FDiscreteFunction> 
+            activations = new Dictionary<Spring.Type, RandomX2FDiscreteFunction>();
 
         [SerializeField] protected float2 timeInterval = new float2(0, 5);
         [SerializeField] protected int sampleSize = 15;
@@ -122,9 +106,12 @@ namespace UnityFishSimulation
 
             if (this.startNewLearning == false) this.Load(this.fileName);
 
-            this.fishSimulator = new FishSimulator();
-            this.fishSimulator.SetStartEnd(start.Item1, end.Item1);
-            this.fishSimulator.SetActivations(this.activations);
+            var p = new FishSimulator.Problem(FishSimulator.Problem.SolverType.Eular, this.activations);
+            var delta = new FishSimulator.Delta();
+            this.fishSimulator = new FishSimulator(p, delta);
+            this.fishSimulator.StartSimulation();
+            //this.fishSimulator.SetStartEnd(start.Item1, end.Item1);
+            //this.fishSimulator.SetActivations(this.activations);
 
         }
 
@@ -148,7 +135,10 @@ namespace UnityFishSimulation
         {
             if (Input.GetKeyDown(KeyCode.A)) this.Save(this.fileName);
 
-            switch(this.currentState)
+
+            if (this.fishSimulator.IsSimulationDone()) this.fishSimulator.StartSimulation();
+
+            /*switch(this.currentState)
             {
                 case SAState.Start:
                     {
@@ -230,7 +220,7 @@ namespace UnityFishSimulation
                     }
                     break;
                 default:break;
-            }
+            }*/
         }
 
         protected bool ShouldUseNext(float current, float next)
@@ -266,16 +256,16 @@ namespace UnityFishSimulation
 
             var E = 0f;
 
-            var trajactory = this.fishSimulator.GetOutput()?.trajactory;
-            var velocity = this.fishSimulator.GetOutput()?.velocity;
+            /*var trajactory = this.fishSimulator.GetOutput()?.trajactory;
+            var velocity = this.fishSimulator.GetOutput()?.velocity;*/
 
             for (int i = 0; i < this.sampleSize; ++i)
             {
                 var Eu = 0f;
-                var Ev = this.mode == ControllerMode.LearningWithSimulation?
-                    math.length(trajactory.Evaluate(i) - new float3(100,0,0)) - velocity.Evaluate(i).x
-                    :0;
-                //var Ev = 0;
+                //var Ev = this.mode == ControllerMode.LearningWithSimulation?
+                //    math.length(trajactory.Evaluate(i) - new float3(100,0,0)) - velocity.Evaluate(i).x
+                //    :0;
+                var Ev = 0;
 
 
                 var du = 0f;
@@ -317,7 +307,8 @@ namespace UnityFishSimulation
                 Gizmos.DrawSphere(new Vector3(drawtestX + 10, drawtestY), 0.1f);*/
             }
 
-            this.fishSimulator?.Fish.OnGizmos(GeometryFunctions.springColorMap);
+            //this.fishSimulator?.Fish.OnGizmos(GeometryFunctions.springColorMap);
+            this.fishSimulator?.OnGizmos();
         }
 
     }
