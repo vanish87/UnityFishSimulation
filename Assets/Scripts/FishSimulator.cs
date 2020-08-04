@@ -96,8 +96,8 @@ namespace UnityFishSimulation
         }
         public class Solution : ISolution
         {
-            protected DiscreteFunction<float, float3> trajactory;
-            protected DiscreteFunction<float, float3> velocity;
+            internal protected DiscreteFunction<float, float3> trajactory;
+            internal protected DiscreteFunction<float, float3> velocity;
             protected int currentIndex;
 
             public Solution(float from, float to, int sampleNum)

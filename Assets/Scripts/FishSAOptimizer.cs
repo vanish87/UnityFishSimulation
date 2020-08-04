@@ -40,7 +40,7 @@ namespace UnityFishSimulation
                 public void RandomCurrentValues()
                 {
                     var range = 1;
-                    var current = this.valueMap.Current;
+                    var current = this.valueMap;
                     for (var i = 0; i < current.Count; ++i)
                     {
                         var n = current[i].Item1;
@@ -48,14 +48,14 @@ namespace UnityFishSimulation
                         current[i] = new Tuple<float, float>(n, math.saturate(y + (ThreadSafeRandom.NextFloat() - 0.5f) * 2 * range));
                     }
                 }
-                public override void RandomNextValues()
+                public override void RandomValues()
                 {
                     var range = 1;
-                    for (var i = 0; i < this.valueMap.Next.Count; ++i)
+                    for (var i = 0; i < this.valueMap.Count; ++i)
                     {
-                        var n = this.valueMap.Next[i].Item1;
-                        var y = this.valueMap.Next[i].Item2;
-                        this.valueMap.Next[i] = new Tuple<float, float>(n, math.saturate(y + (ThreadSafeRandom.NextFloat() - 0.5f) * 2 * range));
+                        var n = this.valueMap[i].Item1;
+                        var y = this.valueMap[i].Item2;
+                        this.valueMap[i] = new Tuple<float, float>(n, math.saturate(y + (ThreadSafeRandom.NextFloat() - 0.5f) * 2 * range));
                     }
                 }
             }
@@ -74,8 +74,8 @@ namespace UnityFishSimulation
                 {
                     get
                     {
-                        var sol = this.simulator.CurrentSolution;
-                        return GetCurrentE(this.activations, this.sampleSize, this.h);
+                        var sol = this.simulator.CurrentSolution as FishSimulator.Solution;
+                        return GetCurrentE(sol, this.activations, this.sampleSize, this.h);
                     }
                 }
 
@@ -105,7 +105,7 @@ namespace UnityFishSimulation
             }
             public class FishState : CricleData<FishStateData, int>
             {
-                public FishState():base(2)
+                public FishState() : base(2)
                 {
 
                 }
@@ -137,7 +137,7 @@ namespace UnityFishSimulation
             }
 
 
-            public static float GetCurrentE(Dictionary<Spring.Type, RandomX2FDiscreteFunction> activations, int sampleSize, float h)
+            public static float GetCurrentE(FishSimulator.Solution sol, Dictionary<Spring.Type, RandomX2FDiscreteFunction> activations, int sampleSize, float h)
             {
                 var mu1 = 0.8f;
                 var mu2 = 0.2f;
@@ -147,16 +147,14 @@ namespace UnityFishSimulation
 
                 var E = 0f;
 
-                /*var trajactory = this.fishSimulator.GetOutput()?.trajactory;
-                var velocity = this.fishSimulator.GetOutput()?.velocity;*/
+                var trajactory = sol?.trajactory;
+                var velocity = sol?.velocity;
 
                 for (int i = 0; i < sampleSize; ++i)
                 {
                     var Eu = 0f;
-                    //var Ev = this.mode == ControllerMode.LearningWithSimulation?
-                    //    math.length(trajactory.Evaluate(i) - new float3(100,0,0)) - velocity.Evaluate(i).x
-                    //    :0;
-                    var Ev = 0;
+                    var Ev = math.length(trajactory.Evaluate(i) - new float3(100, 0, 0)) - velocity.Evaluate(i).x;
+                    //var Ev = 0;
 
 
                     var du = 0f;
@@ -217,8 +215,6 @@ namespace UnityFishSimulation
                         p.temperature *= p.alpha;
 
                         next = p.Next as FishStateData;
-                        //TODO
-                        //Update current sol;
                     }
 
                     next.UpdateNewValue();
