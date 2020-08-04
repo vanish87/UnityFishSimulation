@@ -10,6 +10,7 @@ using UnityTools.Math;
 
 namespace UnityFishSimulation
 {
+    [Serializable]
     public class FishSimulator : Simulator
     {
         public enum RunMode
@@ -18,6 +19,7 @@ namespace UnityFishSimulation
             FullInterval,
         }
 
+        [Serializable]
         public class Problem : IProblem
         {
             public enum SolverType
@@ -94,6 +96,7 @@ namespace UnityFishSimulation
                 return time > this.To;
             }
         }
+        [Serializable]
         public class Solution : ISolution
         {
             internal protected DiscreteFunction<float, float3> trajactory;
@@ -120,6 +123,7 @@ namespace UnityFishSimulation
             }
         }
 
+        [Serializable]
         public class Delta : IDelta
         {
             public const float dt = 0.055f;
