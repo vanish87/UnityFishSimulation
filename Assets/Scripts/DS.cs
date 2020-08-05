@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityTools.Algorithm;
 using UnityTools.Common;
 using UnityTools.Debuging.EditorTool;
+using UnityTools;
+using UnityTools.Math;
 
 namespace UnityFishSimulation
 {
@@ -15,7 +17,7 @@ namespace UnityFishSimulation
         {
             float a = 1;
             float b = 100;
-            float scale = 0.02f;
+            float scale = 1;
 
             public Problem(int dim = 2) : base(dim)
             {
@@ -66,16 +68,12 @@ namespace UnityFishSimulation
 
         public class Delta : IDelta
         {
-            public const float dt = 0.055f;
-            public float current;
             public void Reset()
             {
-                this.current = 0;
             }
 
             public void Step()
             {
-                this.current += dt;
             }
         }
 
@@ -88,6 +86,20 @@ namespace UnityFishSimulation
             var d = new Delta();
             this.simplex = new DownhillSimplex<float>(p, d);
             //this.simplex.ChangeState(this.simplex.Running);
+
+            var meshFiter = this.gameObject.FindOrAddTypeInComponentsAndChilden<MeshFilter>();
+            var meshRender = this.gameObject.FindOrAddTypeInComponentsAndChilden<MeshRenderer>();
+            meshRender.material = new Material(Shader.Find("Diffuse"));
+
+            var mesh = FunctionTool.GenerateFunctionMesh(p);
+            meshFiter.mesh = mesh;
+        }
+
+        protected void OnDestroy()
+        {
+            var meshRender = this.gameObject.FindOrAddTypeInComponentsAndChilden<MeshRenderer>();
+            var mat = meshRender.material;
+            mat.DestoryObj();
         }
 
 
@@ -107,7 +119,7 @@ namespace UnityFishSimulation
         protected void OnDrawGizmos()
         {
             if (p == null ) return;
-            var n = 50;
+            /*var n = 50;
             for(var i = 0; i < n; ++i)
             {
                 for(var j = 0; j < n; ++j)
@@ -119,7 +131,7 @@ namespace UnityFishSimulation
                     Gizmos.DrawSphere(point, 0.8f);
 
                 }
-            }
+            }*/
             
             var simplex = this.simplex.Vertices;
             if (simplex != null)

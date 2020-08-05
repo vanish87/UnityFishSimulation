@@ -116,8 +116,8 @@ namespace UnityFishSimulation
             {
                 if (dt.current > this.trajactory.GetValueX(this.currentIndex))
                 {
-                    this.trajactory.SetValueY(this.currentIndex, problem.FishData.Head.Position);
-                    this.velocity.SetValueY(this.currentIndex, problem.FishData.Velocity);
+                    this.trajactory[this.currentIndex] = problem.FishData.Head.Position;
+                    this.velocity[this.currentIndex] = problem.FishData.Velocity;
                     this.currentIndex++;
                 }
             }

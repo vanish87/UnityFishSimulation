@@ -4,17 +4,13 @@ using System.Linq;
 using UnityEngine;
 using UnityTools.Common;
 using UnityTools.Debuging;
+using UnityTools.Math;
 
 namespace UnityTools.Algorithm
 {
     public class DownhillSimplex<T> : IterationAlgorithm
     {
-        public interface Function
-        {
-            float Evaluate(Vector<T> x);
-        }
-
-        public abstract class Problem : IProblem, Function
+        public abstract class Problem : IProblem, Function<Vector<T>, float>
         {
             internal protected int dim;
             internal protected float eq = 0.00001f;

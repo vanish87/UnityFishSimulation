@@ -15,7 +15,7 @@ namespace UnityFishSimulation
 {
     public class FishSAOptimizer : MonoBehaviour
     {
-
+        [SerializeField] protected List<AnimationCurve> curves = new List<AnimationCurve>();
        /* public class SwimmingProblem : Problem
         {
             public SwimmingProblem(float from, float to, int sampleNum, SolverType type) : base(from, to, type)
@@ -41,13 +41,12 @@ namespace UnityFishSimulation
 
                 public void RandomCurrentValues()
                 {
-                    var range = 1;
                     var current = this.valueMap;
                     for (var i = 0; i < current.Count; ++i)
                     {
                         var n = current[i].Item1;
                         var y = current[i].Item2;
-                        current[i] = new Tuple<float, float>(n, math.saturate(y + (ThreadSafeRandom.NextFloat() - 0.5f) * 2 * range));
+                        current[i] = new Tuple<float, float>(n, ThreadSafeRandom.NextFloat());
                     }
                 }
                 public override void RandomValues()
@@ -83,7 +82,7 @@ namespace UnityFishSimulation
                     {
                         for (var s = 0; s < v.SampleNum; ++s)
                         {
-                            ret[count++] = v.GetValueY(s);
+                            ret[count++] = v[s];
                         }
                     }
 
@@ -96,7 +95,7 @@ namespace UnityFishSimulation
                     {
                         for (var s = 0; s < v.SampleNum; ++s)
                         {
-                            v.SetValueY(s, vector[count++]);
+                            v[s] = vector[count++];
                         }
                     }
                 }
@@ -241,118 +240,11 @@ namespace UnityFishSimulation
                 var current = p.Current as FishStateData;
                 var next = p.Next as FishStateData;
 
-                //if (current.simulator.IsSimulationDone() 
-                //    && next.simulator.IsSimulationDone())
-                if(next.simulator.IsSimulationDone())
-                {
-                    //var ce = current.E;
-                    var ne = next.E;
-                    var n = current.GetVectorDim();
+                if (current.simulator.IsSimulationDone() 
+                    && next.simulator.IsSimulationDone())
+                { 
 
-                    if (this.simplex.Count < n+1)
-                    {
-                        this.simplex.Add(new Vertice() { E = ne, state = next.DeepCopy() });
-
-                        next.UpdateNewValue();
-                    }
-                    else
-                    {
-                        var ordered = this.simplex.OrderBy(v => v.E).ToList();
-
-                        var mean = new Vector<float>(n);
-                        for (var i = 0; i < n; ++i)
-                        {
-                            var fx = ordered[i].state.GetVector();
-                            for (var xi = 0; xi < n; ++xi)
-                            {
-                                mean[xi] += fx[xi];
-                            }
-                        }
-                        for (var xi = 0; xi < n; ++xi)
-                        {
-                            mean[xi] /= n+1;
-                        }
-
-
-                        var worst = ordered[n];
-                        var xn1 = worst.state.GetVector();
-
-                        var xr = new Vector<float>(n);
-                        var xe = new Vector<float>(n);
-                        var xc = new Vector<float>(n);
-                        var xrState = new FishStateData();
-                        var xeState = new FishStateData();
-                        var xcState = new FishStateData();
-                        for (var xi = 0; xi < n; ++xi)
-                        {
-                            xr[xi] = mean[xi] + 1f * (mean[xi] - xn1[xi]);
-                        }
-
-                        xrState.SetVector(xr);
-
-                        var f1 = ordered[0].E;
-                        var fxr = xrState.E;
-                        var fn = ordered[n - 1].E;
-
-                        if (f1 < fxr && fxr < fn)
-                        {
-                            worst.state.SetVector(xr);
-                        }
-                        else
-                        if(fxr < f1)
-                        {
-                            for (var xi = 0; xi < n; ++xi)
-                            {
-                                xe[xi] = xr[xi] + 1f * (xr[xi] - mean[xi]);
-                            }
-
-                            xeState.SetVector(xe);
-
-                            var fe = xeState.E;
-                            if(fe < fxr)
-                            {
-                                worst.state.SetVector(xe);
-                            }
-                            else
-                            {
-                                worst.state.SetVector(xr);
-                            }
-                        }
-                        else 
-                        if(fxr > fn)
-                        {
-                            var count = 0;
-                            while (true && count++<1000)
-                            {
-                                for (var xi = 0; xi < n; ++xi)
-                                {
-                                    xc[xi] = mean[xi] + 0.5f * (xn1[xi] - mean[xi]);
-                                }
-
-                                xcState.SetVector(xc);
-                                var fc = xcState.E;
-                                var fn1 = worst.E;
-                                if (fc < fn1)
-                                {
-                                    worst.state.SetVector(xc);
-                                    break;
-                                }
-
-                                Debug.Log(count);
-                            }
-
-                        }
-
-
-                        var newSol = this.simplex.OrderBy(v => v.E).ToList();
-                        Debug.Log(newSol[0].E);
-
-                        next.SetVector(newSol[0].state.GetVector()); 
-                        //next.simulator.StartSimulation();
-                    }
-
-
-                    /*if (this.ShouldUseNext(ce, ne))
+                    if (this.ShouldUseNext(current.E, next.E))
                     {
                         LogTool.Log("Use Next");
                         LogTool.Log("Current " + current.E);
@@ -362,11 +254,9 @@ namespace UnityFishSimulation
                         p.temperature *= p.alpha;
 
                         next = p.Next as FishStateData;
-                    }*/
-
-
-
-                    //next.simulator.StartSimulation();
+                    }
+                    next.UpdateNewValue();
+                    next.simulator.StartSimulation();
                 }
 
                 return sol;
@@ -383,6 +273,31 @@ namespace UnityFishSimulation
             this.fishSA = new FishSA(problem, dt);
 
             this.fishSA.StartSA();
+
+            this.UpdateCurves();
+        }
+
+        protected void OnDisable()
+        {
+            this.fishSA.Stop();
+        }
+
+        protected void UpdateCurves()
+        {
+            this.curves.Clear();
+
+            foreach (var d in (problem.Current as FishSA.FishStateData).activations.Values)
+            {
+                this.curves.Add(d.ToAnimationCurve());
+            }
+            foreach (var d in (problem.Next as FishSA.FishStateData).activations.Values)
+            {
+                this.curves.Add(d.ToAnimationCurve());
+            }
+        }
+        protected void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.U)) this.UpdateCurves();
         }
 
         protected void OnDrawGizmos()
