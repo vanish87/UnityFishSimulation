@@ -81,7 +81,7 @@ namespace UnityFishSimulation
 
         protected float3 GetSpringForce(MassPoint i, FishModelData fish)
         {
-            var neighbors = fish.FishGraph.GetNeighborsNode(i);
+            var neighbors = fish.FishGraph.GetNeighborsNodes(i);
             var ret = float3.zero;
 
             foreach (var j in neighbors)
@@ -135,8 +135,8 @@ namespace UnityFishSimulation
         {
             //var na = 7;
 
-            var dim = fish.FishGraph.AdjMatrix.Size;
             var nodes = fish.FishGraph.Nodes.ToList();
+            var dim = new int2(nodes.Count, nodes.Count);
 
             var At = new Matrix<float3>(dim.x, dim.y);
             var Gt = new Vector<float3>(dim.x);
@@ -145,8 +145,8 @@ namespace UnityFishSimulation
             {
                 Assert.IsNotNull(s_ij);
 
-                var ni = s_ij.Left;
-                var nj = s_ij.Right;
+                var ni = s_ij.Start;
+                var nj = s_ij.End;
                 var i = ni.Index;
                 var j = nj.Index;
 

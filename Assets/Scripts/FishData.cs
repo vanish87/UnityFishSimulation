@@ -15,10 +15,10 @@ namespace UnityFishSimulation
     public class FishModelData
     {
         [SerializeField, Range(0.01f, 1)] protected float damping = 0.05f;
-        [SerializeField] protected Graph<MassPoint, Spring> fishGraph = new Graph<MassPoint, Spring>(23);
+        [SerializeField] protected NewGraphAdj<MassPoint, Spring> fishGraph = new NewGraphAdj<MassPoint, Spring>(23);
         [SerializeField] protected List<NormalFace> normalFace = new List<NormalFace>();
 
-        public Graph<MassPoint, Spring> FishGraph { get => this.fishGraph; set => this.fishGraph = value; }
+        public NewGraphAdj<MassPoint, Spring> FishGraph { get => this.fishGraph; set => this.fishGraph = value; }
         public List<NormalFace> FishNormalFace { get => this.normalFace; }
         public float Damping { get => this.damping; }
 
@@ -35,8 +35,8 @@ namespace UnityFishSimulation
                 var center = float3.zero;
                 foreach (var n in edges)
                 {
-                    center += n.Left.Position;
-                    center += n.Right.Position;
+                    center += n.Start.Position;
+                    center += n.End.Position;
                 }
                 return center / (edges.Count * 2);
             }
@@ -121,7 +121,7 @@ namespace UnityFishSimulation
 
         public static void InitNewFishModel(FishModelData fish)
         {
-            fish.FishGraph.AdjMatrix.Clear();
+            fish.FishGraph.Clear();
             InitNodes(fish);
             InitSprings(fish);
             InitNormals(fish);
@@ -367,7 +367,7 @@ namespace UnityFishSimulation
     }
 
     [System.Serializable]
-    public class Spring : Segment<MassPoint>
+    public class Spring : PointSegment<MassPoint>, IEdge
     {
         public enum Type
         {
@@ -419,8 +419,8 @@ namespace UnityFishSimulation
 
         public Spring(Type type, Side side, MassPoint from, MassPoint to)
         {
-            this.Left = from;
-            this.Right = to;
+            this.Start = from;
+            this.End = to;
 
             this.type = type;
             this.side = side;

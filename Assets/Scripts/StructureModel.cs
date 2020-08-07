@@ -24,7 +24,7 @@ namespace UnityFishSimulation
         [SerializeField] protected List<Spring> runtimeMuscleList;
         [SerializeField] protected List<Spring> runtimeSpringList;
 
-        protected Graph<MassPoint, Spring> FishGraph { get => this.fishData.FishGraph; }
+        protected NewGraphAdj<MassPoint, Spring> FishGraph { get => this.fishData.FishGraph; }
 
         protected float3 totalForce;
 

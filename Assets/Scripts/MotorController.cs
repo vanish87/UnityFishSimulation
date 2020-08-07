@@ -136,6 +136,13 @@ namespace UnityFishSimulation
             if (Input.GetKeyDown(KeyCode.A)) this.Save(this.fileName);
 
 
+            foreach(var a in this.activations.Values)
+            {
+                foreach(var i in System.Linq.Enumerable.Range(0,this.sampleSize))
+                {
+                    a[i] = this.act;
+                }
+            }
             if (this.fishSimulator.IsSimulationDone()) this.fishSimulator.StartSimulation();
 
             /*switch(this.currentState)
