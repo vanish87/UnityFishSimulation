@@ -98,13 +98,7 @@ namespace UnityFishSimulation
 
             public override float Evaluate(Vector<float> v)
             {
-               /* var x = v[0];
-                var y = v[1];
-
-                var v1 = x * x + y - 11;
-                var v2 = x + y * y - 7;
-                return v1 * v1 + v2 * v2;*/
-
+                
                 var temp = this.activations.DeepCopy();
 
                 var kcount = 0;
