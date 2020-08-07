@@ -312,7 +312,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &987794729
 Transform:
   m_ObjectHideFlags: 0
@@ -339,12 +339,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e9fdb528f83dd7409ec0f11b285f789, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  curve:
-    serializedVersion: 2
-    m_Curve: []
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
+  curves: []
 --- !u!1 &1095931070
 GameObject:
   m_ObjectHideFlags: 0

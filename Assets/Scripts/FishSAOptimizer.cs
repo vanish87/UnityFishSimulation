@@ -70,7 +70,6 @@ namespace UnityFishSimulation
 
                 public float2 timeInterval = new float2(0, 50);
                 public int sampleSize = 30;
-                public float h;
 
 
                 public int GetVectorDim() { return this.sampleSize * this.activations.Count; }
@@ -105,7 +104,7 @@ namespace UnityFishSimulation
                     get
                     {
                         var sol = this.simulator.CurrentSolution as FishSimulator.Solution;
-                        return GetCurrentE(sol, this.activations, this.sampleSize, this.h);
+                        return GetCurrentE(sol, this.activations, this.sampleSize);
                     }
                 }
 
@@ -119,7 +118,6 @@ namespace UnityFishSimulation
 
                 public FishStateData()
                 {
-                    this.h = (this.timeInterval.y - this.timeInterval.x) / sampleSize;
                     var start = new Tuple<float, float>(this.timeInterval.x, 0.5f);
                     var end = new Tuple<float, float>(this.timeInterval.y, 0.5f);
 
@@ -167,7 +165,7 @@ namespace UnityFishSimulation
             }
 
 
-            public static float GetCurrentE(FishSimulator.Solution sol, Dictionary<Spring.Type, RandomX2FDiscreteFunction> activations, int sampleSize, float h)
+            public static float GetCurrentE(FishSimulator.Solution sol, Dictionary<Spring.Type, RandomX2FDiscreteFunction> activations, int sampleSize)
             {
                 var mu1 = 1f;
                 var mu2 = 0f;
@@ -191,8 +189,8 @@ namespace UnityFishSimulation
                     var du2 = 0f;
                     foreach (var fun in activations.Values)
                     {
-                        var dev = fun.Devrivate(i, h);
-                        var dev2 = fun.Devrivate2(i, h);
+                        var dev = fun.Devrivate(i);
+                        var dev2 = fun.Devrivate2(i);
                         du += dev * dev;
                         du2 += dev2 * dev2;
                     }

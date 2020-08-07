@@ -91,6 +91,7 @@ namespace UnityFishSimulation
 
     public static class GeometryFunctions
     {
+        static object lockObj = new object();
         public static FishModelData fish;
         public static Dictionary<Spring.Type, Color> springColorMap = new Dictionary<Spring.Type, Color>()
         {
@@ -110,9 +111,11 @@ namespace UnityFishSimulation
         {
             var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
 
-            if(fish == null) LogTool.Log("Loaded " + path);
-            fish = fish??FileTool.Read<FishModelData>(path);
-
+            lock (lockObj)
+            {
+                if (fish == null) LogTool.Log("Loaded " + path);
+                fish = fish ?? FileTool.Read<FishModelData>(path);
+            }
             return fish.DeepCopy();
         }
 

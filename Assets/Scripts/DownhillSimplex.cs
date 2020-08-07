@@ -28,17 +28,31 @@ namespace UnityTools.Algorithm
         public class Vertice
         {
             public Vector<T> X 
-            { get => this.x; 
+            {
+                get => this.x; 
                 set 
                 { 
-                    this.x = value; 
-                    this.fx = p.Evaluate(this.x); 
-                } 
+                    this.x = value;
+                    this.isDirty = true;
+                    //this.fx = p.Evaluate(this.x); 
+                }
             }
-            public float Fx { get { return this.fx; } }
+            public float Fx
+            {
+                get
+                {
+                    if (this.isDirty)
+                    {
+                        this.fx = p.Evaluate(this.x);
+                        this.isDirty = false;
+                    }
+                    return this.fx;
+                }
+            }
 
             private float fx;
             private Vector<T> x;
+            private bool isDirty = true;
             private Problem p;
 
             public Vertice(Problem problem)
@@ -75,6 +89,8 @@ namespace UnityTools.Algorithm
             this.currentSolution = new Solution();
         }
 
+        public bool IsRunning() { return this.currentState == this.Running; }
+
         public override bool IsSolutionAcceptable(ISolution solution)
         {
             var vn = this.simplex.Count;
@@ -102,11 +118,12 @@ namespace UnityTools.Algorithm
             var p = this.problem as Problem;
             if (sd < p.eq)
             {
-                LogTool.Log("Down with sd " + sd);
+                LogTool.Log("Done with sd " + sd);
                 return true;
             }
             else
             {
+                //LogTool.Log("Not good with sd " + sd);
                 return false;
             }
         }

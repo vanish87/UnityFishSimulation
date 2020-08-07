@@ -182,7 +182,7 @@ namespace UnityFishSimulation
             p.Step();
 
             sol.UpdateSolution(p, d);
-
+            
             return this.CurrentSolution;
         }
 
