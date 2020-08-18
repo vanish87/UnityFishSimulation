@@ -13,25 +13,21 @@ namespace UnityFishSimulation
     [Serializable]
     public class FishSimulator : Simulator
     {
-        public enum RunMode
+        /*public enum RunMode
         {
             PerStep,
             FullInterval,
+        }*/
+        public enum SolverType
+        {
+            Euler,
+            Matrix,
         }
 
         [Serializable]
         public class Problem : IProblem
         {
-            public enum SolverType
-            {
-                Eular,
-                Matrix,
-            }
-            //[SerializeField] protected RunMode runMode = RunMode.PerStep;
-            protected SolverType solverType = SolverType.Eular;
-
             protected FishModelData fish;
-            protected FishSolver solver;
 
             protected Dictionary<Spring.Type, FishSAOptimizer.FishSA.RandomX2FDiscreteFunction> activations;
 
@@ -40,29 +36,15 @@ namespace UnityFishSimulation
             public float To { get => this.activations.FirstOrDefault().Value.End.Item1; }
             public int SampleNum { get => this.activations.FirstOrDefault().Value.SampleNum; }
 
-            public Problem(SolverType type, Dictionary<Spring.Type, FishSAOptimizer.FishSA.RandomX2FDiscreteFunction> activations)
+            public Problem(Dictionary<Spring.Type, FishSAOptimizer.FishSA.RandomX2FDiscreteFunction> activations)
             {
-                this.solverType = type;
                 this.activations = activations;
+                this.ReloadData();
             }
 
-            protected internal void ResetData()
+            public void ReloadData()
             {
-                this.fish = GeometryFunctions.Load().DeepCopy();
-                if (this.solverType == SolverType.Eular)
-                {
-                    this.solver = new FishEularSolver();
-                }
-                else
-                {
-                    this.solver = new FishMatrixSolver();
-                }
-            }
-
-            internal protected void Step()
-            {
-                //TODO move solver to FishSimulator class
-                this.solver.Step(this.fish, Delta.dt);
+                this.fish = GeometryFunctions.Load();
             }
 
             internal protected void ApplyActivations(Spring.Type type, IDelta dt)
@@ -139,10 +121,13 @@ namespace UnityFishSimulation
             }
         }
 
+        //[SerializeField] protected RunMode runMode = RunMode.PerStep;
+        protected SolverType solverType = SolverType.Euler;
+        protected IAlgorithm solver;
 
-        public FishSimulator(IProblem problem, IDelta dt) : base(problem, dt)
+        public FishSimulator(SolverType type, IProblem problem, IDelta dt) : base(problem, dt)
         {
-
+            this.solverType = type;
         }
 
         public void StartSimulation()
@@ -153,7 +138,16 @@ namespace UnityFishSimulation
         public void ResetData()
         {
             var p = this.problem as Problem;
-            p.ResetData();
+            p.ReloadData();
+
+            if (this.solverType == SolverType.Euler)
+            {
+                this.solver = new FishEulerSolver();
+            }
+            else
+            {
+                this.solver = new FishMatrixSolver();
+            }
 
             this.currentSolution = new Solution(p.From, p.To, p.SampleNum);
         }
@@ -179,15 +173,12 @@ namespace UnityFishSimulation
             p.ApplyActivations(Spring.Type.MuscleMiddle, dt);
             p.ApplyActivations(Spring.Type.MuscleBack, dt);
 
-            p.Step();
+            this.solver.Solve(new FishStructureProblem() { fish = p.FishData, dt = Delta.dt });
 
             sol.UpdateSolution(p, d);
             
             return this.CurrentSolution;
         }
-
-
-
 
         public void OnGizmos()
         {

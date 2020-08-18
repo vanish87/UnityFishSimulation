@@ -18,7 +18,7 @@ namespace UnityFishSimulation
     {         
 
         [SerializeField] protected FishModelData fishData = new FishModelData();
-        [SerializeField] protected FishEularSolver fishSolver = new FishEularSolver();
+        [SerializeField] protected FishEulerSolver fishSolver = new FishEulerSolver();
         [SerializeField] protected FishMatrixSolver fishMatrixSolver = new FishMatrixSolver();
         [SerializeField] protected List<MassPoint> runtimeList;
         [SerializeField] protected List<Spring> runtimeMuscleList;
@@ -86,15 +86,15 @@ namespace UnityFishSimulation
         }
         protected void Step(FishModelData fish)
         {
-            this.fishSolver.Step(fish);
+            this.fishSolver.Solve(new FishStructureProblem() { fish = fish, dt = FishSimulator.Delta.dt });
         }
 
 
         protected void StepMartix(FishModelData fish)
         {
-            this.fishMatrixSolver.Step(fish);
+            this.fishMatrixSolver.Solve(new FishStructureProblem() { fish = fish, dt = FishSimulator.Delta.dt });
         }
-        
+
 
         void Print(Matrix<float3> mat, string name, bool value = false)
         {

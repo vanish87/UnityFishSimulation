@@ -9,22 +9,22 @@ using UnityTools.Common;
 
 namespace UnityFishSimulation
 {
-    public interface FishSolver
+    public class FishStructureProblem : IProblem
     {
-        void Step(FishModelData fish, float dt);
-        void PreSolve(FishModelData fish);
-        void ApplyForces(FishModelData fish);
-        void Intergrate(FishModelData fish, float dt);
-        void PostSolve(FishModelData fish);
+        public FishModelData fish;
+        public float dt;
     }
-
     [System.Serializable]
-    public class FishEularSolver : FishSolver
+    public class FishEulerSolver : IAlgorithm
     {
         [SerializeField, Range(0.01f, 1)] protected float fluidForceScale = 1f;
 
-        public void Step(FishModelData fish, float dt = 0.055F)
+        public ISolution Solve(IProblem problem)
         {
+            var fishProblem = problem as FishStructureProblem;
+            var dt = fishProblem.dt;
+            var fish = fishProblem.fish;
+
             var step = 10;
             dt = dt / step;
             foreach (var value in Enumerable.Range(0, step))
@@ -34,6 +34,8 @@ namespace UnityFishSimulation
                 this.Intergrate(fish, dt);
                 this.PostSolve(fish);
             }
+
+            return default;
         }
 
         public void PreSolve(FishModelData fish)
@@ -43,6 +45,7 @@ namespace UnityFishSimulation
         public void ApplyForces(FishModelData fish)
         {
             this.ApplySpringForce(fish);
+            this.ApplyDumpingForce(fish);
             this.ApplyFluidForce(fish);
         }
 
@@ -50,9 +53,6 @@ namespace UnityFishSimulation
         {
             foreach (var n in fish.FishGraph.Nodes)
             {
-                var newVelocity = n.Velocity + (n.Force / n.Mass) * dt;
-                n.Force += -fish.Damping * newVelocity;
-
                 n.Velocity += (n.Force / n.Mass) * dt;
                 n.Position += n.Velocity * dt;
             }
@@ -70,7 +70,13 @@ namespace UnityFishSimulation
                 n.Force += force;
             }
         }
-
+        public void ApplyDumpingForce(FishModelData fish)
+        {
+            foreach (var n in fish.FishGraph.Nodes)
+            {
+                n.Force += -fish.Damping * n.Velocity;
+            }
+        }
         protected void ApplyFluidForce(FishModelData fish)
         {
             foreach (var face in fish.FishNormalFace)
@@ -90,6 +96,7 @@ namespace UnityFishSimulation
                 var r_ij = math.length(r);
                 var s_ij = fish.FishGraph.GetEdge(i, j);
                 Assert.IsNotNull(s_ij);
+                Assert.IsTrue(i.Index != j.Index);
 
                 var e_ij = r_ij - s_ij.CurrentL;
 
@@ -105,12 +112,15 @@ namespace UnityFishSimulation
     }
 
     [System.Serializable]
-    public class FishMatrixSolver : FishSolver
+    public class FishMatrixSolver : IAlgorithm
     {
         [SerializeField, Range(0.01f, 1)] protected float fluidForceScale = 1f;
-
-        public void Step(FishModelData fish, float dt = 0.055F)
+        public ISolution Solve(IProblem problem)
         {
+            var fishProblem = problem as FishStructureProblem;
+            var dt = fishProblem.dt;
+            var fish = fishProblem.fish;
+
             var step = 1;
             dt = dt / step;
             foreach (var value in Enumerable.Range(0, step))
@@ -120,6 +130,8 @@ namespace UnityFishSimulation
                 this.Intergrate(fish, dt);
                 this.PostSolve(fish);
             }
+
+            return default;
         }
 
         public void PreSolve(FishModelData fish)

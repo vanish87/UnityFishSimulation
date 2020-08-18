@@ -106,9 +106,9 @@ namespace UnityFishSimulation
 
             if (this.startNewLearning == false) this.Load(this.fileName);
 
-            var p = new FishSimulator.Problem(FishSimulator.Problem.SolverType.Eular, this.activations);
+            var p = new FishSimulator.Problem(this.activations);
             var delta = new FishSimulator.Delta();
-            this.fishSimulator = new FishSimulator(p, delta);
+            this.fishSimulator = new FishSimulator(FishSimulator.SolverType.Euler, p, delta);
             this.fishSimulator.StartSimulation();
             //this.fishSimulator.SetStartEnd(start.Item1, end.Item1);
             //this.fishSimulator.SetActivations(this.activations);

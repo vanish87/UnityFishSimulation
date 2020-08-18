@@ -207,10 +207,10 @@ namespace UnityFishSimulation
             var p2 = this.p as Problem2;
             if (p2 != null)
             {
-                var fp = new FishSimulator.Problem(FishSimulator.Problem.SolverType.Eular, p2.activations);
+                var fp = new FishSimulator.Problem(p2.activations);
                 var delta = new FishSimulator.Delta();
 
-                this.simulator = new FishSimulator(fp, delta);
+                this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, fp, delta);
                 this.simulator.StartSimulation();
             }
         }

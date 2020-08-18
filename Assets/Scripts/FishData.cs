@@ -91,7 +91,6 @@ namespace UnityFishSimulation
 
     public static class GeometryFunctions
     {
-        static object lockObj = new object();
         public static FishModelData fish;
         public static Dictionary<Spring.Type, Color> springColorMap = new Dictionary<Spring.Type, Color>()
         {
@@ -109,12 +108,18 @@ namespace UnityFishSimulation
         }
         public static FishModelData Load(string fileName = "fish.model")
         {
-            var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
-
-            lock (lockObj)
+            try
             {
+                var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
                 if (fish == null) LogTool.Log("Loaded " + path);
                 fish = fish ?? FileTool.Read<FishModelData>(path);
+            }
+            catch (System.Exception e)
+            {
+                LogTool.Log(e.ToString(), LogLevel.Error);
+
+                fish = new FishModelData();
+                InitNewFishModel(fish);
             }
             return fish.DeepCopy();
         }
@@ -411,7 +416,7 @@ namespace UnityFishSimulation
         [SerializeField] protected Type type = Type.Normal;
         [SerializeField] protected Side side = Side.None;
         public float Activation { get => this.activation; set => this.activation = value; }
-        public float CurrentL { get => math.lerp(this.lr, this.lc, this.activation); }
+        public float CurrentL { get => math.lerp(this.lr, this.lc, this.Activation); }
         public float C { get => this.c; }
         public float K { get => this.k; }
         public Type SpringType { get => this.type; }

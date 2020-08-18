@@ -198,7 +198,7 @@ namespace UnityTools.Algorithm
 
             if (this.IsSolutionAcceptable(sol))
             {
-                this.ChangeState(SimulatorSateDone.Instance);
+                this.ChangeState(IterationSateDone.Instance);
             }
 
 
