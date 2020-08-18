@@ -34,6 +34,7 @@ namespace UnityFishSimulation
             [System.Serializable]
             public class RandomX2FDiscreteFunction : X2FDiscreteFunction<float>
             {
+                public RandomX2FDiscreteFunction(AnimationCurve from) : base(from) { }
                 public RandomX2FDiscreteFunction(Tuple<float, float> start, Tuple<float, float> end, int sampleNum) : base(start, end, sampleNum)
                 {
 
