@@ -29,14 +29,14 @@ namespace UnityFishSimulation
         {
             protected FishModelData fish;
 
-            protected Dictionary<Spring.Type, FishSAOptimizer.FishSA.RandomX2FDiscreteFunction> activations;
+            protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations;
 
             public FishModelData FishData { get => this.fish; }
             public float From { get => this.activations.FirstOrDefault().Value.Start.Item1; }
             public float To { get => this.activations.FirstOrDefault().Value.End.Item1; }
             public int SampleNum { get => this.activations.FirstOrDefault().Value.SampleNum; }
 
-            public Problem(Dictionary<Spring.Type, FishSAOptimizer.FishSA.RandomX2FDiscreteFunction> activations)
+            public Problem(Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations)
             {
                 this.activations = activations;
                 this.ReloadData();

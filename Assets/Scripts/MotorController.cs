@@ -67,8 +67,8 @@ namespace UnityFishSimulation
 
         [SerializeField] protected FishSimulator fishSimulator;
 
-        [SerializeField] protected Dictionary<Spring.Type, RandomX2FDiscreteFunction> 
-            activations = new Dictionary<Spring.Type, RandomX2FDiscreteFunction>();
+        [SerializeField] protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> 
+            activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
 
         [SerializeField] protected float2 timeInterval = new float2(0, 5);
         [SerializeField] protected int sampleSize = 15;
@@ -100,8 +100,8 @@ namespace UnityFishSimulation
             var end   = new Tuple<float, float>(this.timeInterval.y, 0.5f);
 
             //this.activations.Add(Spring.Type.MuscleFront, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
-            this.activations.Add(Spring.Type.MuscleMiddle, new RandomX2FDiscreteFunction(start, end, this.sampleSize));
-            this.activations.Add(Spring.Type.MuscleBack, new RandomX2FDiscreteFunction(start, end, this.sampleSize));
+            this.activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
+            this.activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
 
 
             if (this.startNewLearning == false) this.Load(this.fileName);
@@ -120,7 +120,7 @@ namespace UnityFishSimulation
             var path = System.IO.Path.Combine(Application.streamingAssetsPath, file+ ".func");
             if (File.Exists(path) == false) return;
 
-            this.activations = FileTool.Read<Dictionary<Spring.Type, RandomX2FDiscreteFunction>>(path);
+            this.activations = FileTool.Read<Dictionary<Spring.Type, X2FDiscreteFunction<float>>>(path);
             LogTool.Log("Loaded " + path);
         }
 

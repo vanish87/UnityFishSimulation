@@ -71,7 +71,7 @@ namespace UnityFishSimulation
 
         public class Problem2 : DownhillSimplex<float>.Problem
         {
-            public Dictionary<Spring.Type, RandomX2FDiscreteFunction> activations = new Dictionary<Spring.Type, RandomX2FDiscreteFunction>();
+            public Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
 
             public float2 timeInterval = new float2(0, 20);
             public int sampleNum = 15;
@@ -85,12 +85,12 @@ namespace UnityFishSimulation
                 var end = new Tuple<float, float>(this.timeInterval.y, 0.5f);
 
                 //this.activations.Add(Spring.Type.MuscleFront, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
-                this.activations.Add(Spring.Type.MuscleMiddle, new RandomX2FDiscreteFunction(start, end, this.sampleNum));
-                this.activations.Add(Spring.Type.MuscleBack, new RandomX2FDiscreteFunction(start, end, this.sampleNum));
+                this.activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, this.sampleNum));
+                this.activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, this.sampleNum));
 
                 foreach(var fun in this.activations.Values)
                 {
-                    fun.RandomCurrentValues();
+                    fun.RandomValues();
                 }
 
                 this.dim = this.activations.Count * this.sampleNum;
@@ -271,7 +271,7 @@ namespace UnityFishSimulation
 
                 foreach(var v in p2.activations.Values)
                 {
-                    v.RandomCurrentValues();
+                    v.RandomValues();
                 }
 
                 this.curves.Clear();
@@ -302,7 +302,7 @@ namespace UnityFishSimulation
             }
         }
 
-        protected void Save(Dictionary<Spring.Type, RandomX2FDiscreteFunction> activations, string file = "Swimming")
+        protected void Save(Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations, string file = "Swimming")
         {
             var path = System.IO.Path.Combine(Application.streamingAssetsPath, file + ".func");
             FileTool.Write(path, activations);

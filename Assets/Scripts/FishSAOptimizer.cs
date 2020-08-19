@@ -31,7 +31,7 @@ namespace UnityFishSimulation
         }*/
         public class FishSA : SimulatedAnnealing
         {
-            [System.Serializable]
+            /*[System.Serializable]
             public class RandomX2FDiscreteFunction : X2FDiscreteFunction<float>
             {
                 public RandomX2FDiscreteFunction(AnimationCurve from) : base(from) { }
@@ -60,12 +60,12 @@ namespace UnityFishSimulation
                         this.valueMap[i] = new Tuple<float, float>(n, math.saturate(y + (ThreadSafeRandom.NextFloat() - 0.5f) * 2 * range));
                     }
                 }
-            }
+            }*/
 
             [System.Serializable]
             public class FishStateData: State
             {
-                public Dictionary<Spring.Type, RandomX2FDiscreteFunction> activations = new Dictionary<Spring.Type, RandomX2FDiscreteFunction>();
+                public Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
                 [NonSerialized] public FishSimulator simulator;
                 [NonSerialized] public FishSimulator.Problem problem;
 
@@ -113,7 +113,7 @@ namespace UnityFishSimulation
                 {
                     foreach(var act in this.activations)
                     {
-                        act.Value.RandomCurrentValues();
+                        act.Value.RandomValues();
                     }
                 }
 
@@ -123,8 +123,8 @@ namespace UnityFishSimulation
                     var end = new Tuple<float, float>(this.timeInterval.y, 0.5f);
 
                     //this.activations.Add(Spring.Type.MuscleFront, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
-                    this.activations.Add(Spring.Type.MuscleMiddle, new RandomX2FDiscreteFunction(start, end, this.sampleSize));
-                    this.activations.Add(Spring.Type.MuscleBack, new RandomX2FDiscreteFunction(start, end, this.sampleSize));
+                    this.activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
+                    this.activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
 
                     problem = new FishSimulator.Problem(this.activations);
                     var delta = new FishSimulator.Delta();
@@ -162,11 +162,11 @@ namespace UnityFishSimulation
             }
             public class FishSASolution
             {
-                public Dictionary<Spring.Type, RandomX2FDiscreteFunction> actvations;
+                public Dictionary<Spring.Type, X2FDiscreteFunction<float>> actvations;
             }
 
 
-            public static float GetCurrentE(FishSimulator.Solution sol, Dictionary<Spring.Type, RandomX2FDiscreteFunction> activations, int sampleSize)
+            public static float GetCurrentE(FishSimulator.Solution sol, Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations, int sampleSize)
             {
                 var mu1 = 1f;
                 var mu2 = 0f;

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityTools.Math;
 
 namespace UnityFishSimulation
 {
@@ -20,8 +21,10 @@ namespace UnityFishSimulation
         [SerializeField] protected int sampleNum = 15;
         [SerializeField] protected List<AnimationCurve> curves = new List<AnimationCurve>();
 
+        [SerializeField] protected List<float3> traj = new List<float3>();
+
         protected FishSimulator simulator;
-        protected Dictionary<Spring.Type, FishSAOptimizer.FishSA.RandomX2FDiscreteFunction> activations = new Dictionary<Spring.Type, FishSAOptimizer.FishSA.RandomX2FDiscreteFunction>();
+        protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
         
         protected void InitActivations()
         {
@@ -31,12 +34,12 @@ namespace UnityFishSimulation
             var end = new Tuple<float, float>(this.timeInterval.y, 0.5f);
 
             //this.activations.Add(Spring.Type.MuscleFront, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
-            this.activations.Add(Spring.Type.MuscleMiddle, new FishSAOptimizer.FishSA.RandomX2FDiscreteFunction(start, end, this.sampleNum));
-            this.activations.Add(Spring.Type.MuscleBack, new FishSAOptimizer.FishSA.RandomX2FDiscreteFunction(start, end, this.sampleNum));
+            this.activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, this.sampleNum));
+            this.activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, this.sampleNum));
 
             foreach (var fun in this.activations.Values)
             {
-                fun.RandomCurrentValues();
+                fun.RandomValues();
             }
         }
 
@@ -51,8 +54,15 @@ namespace UnityFishSimulation
 
         protected void UpdateAnimationsFunctions()
         {
-            this.activations[Spring.Type.MuscleMiddle] = new FishSAOptimizer.FishSA.RandomX2FDiscreteFunction(this.curves[0]);
-            this.activations[Spring.Type.MuscleBack] = new FishSAOptimizer.FishSA.RandomX2FDiscreteFunction(this.curves[1]);
+            this.activations[Spring.Type.MuscleMiddle] = new X2FDiscreteFunction<float>(this.curves[0]);
+            this.activations[Spring.Type.MuscleBack] = new X2FDiscreteFunction<float>(this.curves[1]);
+        }
+
+        protected void UpdateTraj()
+        {
+            this.traj.Clear();
+            var sol = this.simulator.CurrentSolution as FishSimulator.Solution;
+            this.traj.AddRange(sol.trajactory.ToYVector());
         }
 
         protected void Start()
@@ -71,11 +81,14 @@ namespace UnityFishSimulation
         {
             if (this.simulator.IsSimulationDone())
             {
+                this.UpdateTraj();
+
                 this.UpdateAnimationsFunctions();
                 this.simulator.StartSimulation();
             }
 
-            if(this.mode == Mode.Manual)
+
+            if (this.mode == Mode.Manual)
             {
                 foreach (var a in this.activations.Values)
                 {
@@ -95,6 +108,11 @@ namespace UnityFishSimulation
         protected void OnDrawGizmos()
         {
             this.simulator?.OnGizmos();
+
+            for(var i = 0; i < this.traj.Count-1; ++i)
+            {
+                Gizmos.DrawLine(this.traj[i], this.traj[i + 1]);
+            }
         }
 
     }
