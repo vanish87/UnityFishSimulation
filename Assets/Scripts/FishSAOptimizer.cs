@@ -278,7 +278,7 @@ namespace UnityFishSimulation
 
         protected void OnDisable()
         {
-            this.fishSA.Stop();
+            this.fishSA.StopThread();
         }
 
         protected void UpdateCurves()

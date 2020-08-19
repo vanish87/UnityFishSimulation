@@ -311,8 +311,8 @@ namespace UnityFishSimulation
 
         protected void OnDisable()
         {
-            this.simplex.Stop();
-            this.simulator.Stop();
+            this.simplex.StopThread();
+            this.simulator.StopThread();
         }
 
         protected void OnDrawGizmos()

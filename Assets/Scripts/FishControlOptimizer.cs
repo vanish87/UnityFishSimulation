@@ -57,7 +57,7 @@ namespace UnityFishSimulation
 
                 var e = this.GetCurrentE(simulator?.CurrentSolution as FishSimulator.Solution, activations, this.sampleNum);
 
-                if(useSim) simulator.Stop();
+                if(useSim) simulator.StopThread();
 
                 Debug.Log("end with e = " + e);
                 //cal new E from RandomX2FDiscreteFunction and trajactory
@@ -152,14 +152,14 @@ namespace UnityFishSimulation
             p = new Problem(dim, this.timeInterval, this.sampleNum);
             var d = new Delta();
             this.simplex = new DownhillSimplex<float>(p, d);
-            this.simplex.ChangeState(this.simplex.Running);
+            this.simplex.TryToRun();
         }
 
         protected void OnDisable()
         {
             this.simplex.ChangeState(this.simplex.Done);
-            this.simplex.Stop();
-            this.simulator?.Stop();
+            this.simplex.StopThread();
+            this.simulator?.StopThread();
         }
 
         protected void Update()
@@ -172,7 +172,7 @@ namespace UnityFishSimulation
                 var problem = new FishSimulator.Problem(this.activations);
                 var delta = new FishSimulator.Delta();
 
-                if(this.simulator != null)this.simulator.Stop();
+                if(this.simulator != null)this.simulator.StopThread();
                 this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
                 this.simulator.StartSimulation();
             }

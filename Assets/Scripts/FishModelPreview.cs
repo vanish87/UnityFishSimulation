@@ -102,7 +102,7 @@ namespace UnityFishSimulation
 
         protected void OnDisable()
         {
-            this.simulator.Stop();
+            this.simulator.StopThread();
         }
 
         protected void OnDrawGizmos()

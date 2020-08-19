@@ -13,11 +13,6 @@ namespace UnityFishSimulation
     [Serializable]
     public class FishSimulator : Simulator
     {
-        /*public enum RunMode
-        {
-            PerStep,
-            FullInterval,
-        }*/
         public enum SolverType
         {
             Euler,
@@ -121,7 +116,6 @@ namespace UnityFishSimulation
             }
         }
 
-        //[SerializeField] protected RunMode runMode = RunMode.PerStep;
         protected SolverType solverType = SolverType.Euler;
         protected IAlgorithm solver;
 
@@ -133,7 +127,7 @@ namespace UnityFishSimulation
         public void StartSimulation()
         {
             this.ResetData();
-            this.ChangeState(this.Running);
+            this.TryToRun();
         }
         public void ResetData()
         {
@@ -173,6 +167,7 @@ namespace UnityFishSimulation
             p.ApplyActivations(Spring.Type.MuscleMiddle, dt);
             p.ApplyActivations(Spring.Type.MuscleBack, dt);
 
+            //Step fish data once
             this.solver.Solve(new FishStructureProblem() { fish = p.FishData, dt = Delta.dt });
 
             sol.UpdateSolution(p, d);
