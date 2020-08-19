@@ -5,44 +5,95 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityTools.Algorithm;
 using UnityTools.Common;
+using UnityTools.Debuging;
 using UnityTools.Math;
 
 namespace UnityFishSimulation
 {
-    public class FishControlOptimizer : MonoBehaviour
+    public class FishActivationData
     {
-        protected static Dictionary<Spring.Type, X2FDiscreteFunction<float>> VectorToActivation(Vector<float> x, float2 interval, int sampleNum)
+        public static Dictionary<Spring.Type, X2FDiscreteFunction<float>> VectorToActivation(Type type, Vector<float> x, float2 interval, int sampleNum)
         {
             var activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
-            var start = new Tuple<float, float>(interval.x, x[0]);
-            var end = new Tuple<float, float>(interval.y, x[x.Size - 1]);
 
-            activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, Vector<float>.Sub(0, sampleNum, x)));
-            activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, Vector<float>.Sub(sampleNum, sampleNum * 2, x)));
+            switch (type)
+            {
+                case Type.Swimming:
+                    {
+                        activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(interval.x, interval.y, Vector<float>.Sub(0, sampleNum, x)));
+                        activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(interval.x, interval.y, Vector<float>.Sub(sampleNum, sampleNum * 2, x)));
+                    }
+                    break;
+                default: break;
+            }
 
             return activations;
         }
+
+        public enum Type
+        {
+            Swimming,
+        }
+        protected float2 interval;
+        protected int sampleNum;
+        protected Type type = Type.Swimming;
+
+        protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations;
+
+        public Dictionary<Spring.Type, X2FDiscreteFunction<float>> Activations { get => this.activations; }
+
+        public FishActivationData(float2 interval, int sampleNum = 15, Type type = Type.Swimming)
+        {
+            this.interval = interval;
+            this.sampleNum = sampleNum;
+            this.type = type;
+
+            this.activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
+            switch (this.type)
+            {
+                case Type.Swimming:
+                    {
+                        var start = new Tuple<float, float>(interval.x, 0);
+                        var end = new Tuple<float, float>(interval.y, 0);
+                        activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, this.sampleNum));
+                        activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, this.sampleNum));
+                    }
+                    break;
+                default: break;
+            }
+        }
+
+        public void UpdateFromVector(Vector<float> x)
+        {
+            this.activations = VectorToActivation(this.type, x, this.interval, this.sampleNum);
+        }
+    }
+    public class FishControlOptimizer : MonoBehaviour
+    {
         public class Problem : DownhillSimplex<float>.Problem
         {
+            protected FishActivationData fishActivationData;
             protected float2 interval;
             protected int sampleNum;
             public Problem(int dim, float2 interval, int sampleNum) : base(dim)
             {
                 this.interval = interval;
                 this.sampleNum = sampleNum;
+
+                this.fishActivationData = new FishActivationData(this.interval, this.sampleNum);
             }
 
             public override float Evaluate(Vector<float> x)
             {
                 //from vector x
                 //convert to X2FDiscreteFunction
-                var activations = VectorToActivation(x, this.interval, this.sampleNum);
+                this.fishActivationData.UpdateFromVector(x);
 
                 var useSim = true;
                 FishSimulator simulator = null;
                 if (useSim)
                 {
-                    var problem = new FishSimulator.Problem(activations);
+                    var problem = new FishSimulator.Problem(this.fishActivationData.Activations);
                     var delta = new FishSimulator.Delta();
 
 
@@ -55,7 +106,7 @@ namespace UnityFishSimulation
                     while (simulator.IsSimulationDone() == false) { }
                 }
 
-                var e = this.GetCurrentE(simulator?.CurrentSolution as FishSimulator.Solution, activations, this.sampleNum);
+                var e = this.GetCurrentE(simulator?.CurrentSolution as FishSimulator.Solution, this.fishActivationData.Activations, this.sampleNum);
 
                 if(useSim) simulator.StopThread();
 
@@ -143,6 +194,8 @@ namespace UnityFishSimulation
 
         protected FishSimulator simulator;
 
+        [SerializeField] protected List<AnimationCurve> curves = new List<AnimationCurve>();
+
         protected void Start()
         {
             this.InitActivations();
@@ -153,6 +206,13 @@ namespace UnityFishSimulation
             var d = new Delta();
             this.simplex = new DownhillSimplex<float>(p, d);
             this.simplex.TryToRun();
+
+            this.simplex.PerStep((p, s, dt, a) =>
+            {
+                LogTool.Log("Solution Updated: ", LogLevel.Info);
+                var sol = s as DownhillSimplex<float>.Solution;
+                sol.min.Print();
+            });
         }
 
         protected void OnDisable()
@@ -167,7 +227,7 @@ namespace UnityFishSimulation
             if(Input.GetKeyDown(KeyCode.U))
             {
                 var sol = (this.simplex.CurrentSolution) as DownhillSimplex<float>.Solution;
-                this.activations = VectorToActivation(sol.min.X, this.timeInterval, this.sampleNum);
+                this.activations = FishActivationData.VectorToActivation(FishActivationData.Type.Swimming, sol.min.X, this.timeInterval, this.sampleNum);
 
                 var problem = new FishSimulator.Problem(this.activations);
                 var delta = new FishSimulator.Delta();
@@ -175,6 +235,12 @@ namespace UnityFishSimulation
                 if(this.simulator != null)this.simulator.StopThread();
                 this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
                 this.simulator.StartSimulation();
+
+                this.curves.Clear();
+                foreach(var act in this.activations.Values)
+                {
+                    this.curves.Add(act.ToAnimationCurve());
+                }
             }
         }
 

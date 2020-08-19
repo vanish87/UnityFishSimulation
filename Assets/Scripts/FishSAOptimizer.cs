@@ -63,7 +63,7 @@ namespace UnityFishSimulation
             }*/
 
             [System.Serializable]
-            public class FishStateData: State
+            public class FishStateData: IState
             {
                 public Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
                 [NonSerialized] public FishSimulator simulator;
@@ -117,6 +117,16 @@ namespace UnityFishSimulation
                     }
                 }
 
+                public float Evaluate(IState x)
+                {
+                    throw new NotImplementedException();
+                }
+
+                public IState Generate(IState x)
+                {
+                    throw new NotImplementedException();
+                }
+
                 public FishStateData()
                 {
                     var start = new Tuple<float, float>(this.timeInterval.x, 0.5f);
@@ -148,9 +158,9 @@ namespace UnityFishSimulation
             {
                 protected FishState state = new FishState();
 
-                public override State Current => this.state.Current;
+                public override IState Current => this.state.Current;
 
-                public override State Next => this.state.Next;
+                public override IState Next => this.state.Next;
 
 
                 public override void MoveToNext()

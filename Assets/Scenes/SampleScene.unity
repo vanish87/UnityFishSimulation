@@ -295,7 +295,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   timeInterval:
     x: 0
-    y: 60
+    y: 30
   sampleNum: 15
 --- !u!4 &871929504
 Transform:
