@@ -24,20 +24,13 @@ namespace UnityFishSimulation
         [SerializeField] protected List<float3> traj = new List<float3>();
 
         protected FishSimulator simulator;
-        protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
+        protected FishActivationData activationData;
         
         protected void InitActivations()
         {
-            this.activations.Clear();
+            this.activationData = new FishActivationData(this.timeInterval, this.sampleNum);
 
-            var start = new Tuple<float, float>(this.timeInterval.x, 0.5f);
-            var end = new Tuple<float, float>(this.timeInterval.y, 0.5f);
-
-            //this.activations.Add(Spring.Type.MuscleFront, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
-            this.activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, this.sampleNum));
-            this.activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, this.sampleNum));
-
-            foreach (var fun in this.activations.Values)
+            foreach (var fun in this.activationData.Activations.Values)
             {
                 fun.RandomValues();
             }
@@ -46,7 +39,7 @@ namespace UnityFishSimulation
         protected void UpdateAnimations()
         {
             this.curves.Clear();
-            foreach(var func in this.activations.Values)
+            foreach(var func in this.activationData.Activations.Values)
             {
                 this.curves.Add(func.ToAnimationCurve());
             }
@@ -54,8 +47,8 @@ namespace UnityFishSimulation
 
         protected void UpdateAnimationsFunctions()
         {
-            this.activations[Spring.Type.MuscleMiddle] = new X2FDiscreteFunction<float>(this.curves[0]);
-            this.activations[Spring.Type.MuscleBack] = new X2FDiscreteFunction<float>(this.curves[1]);
+            this.activationData.Activations[Spring.Type.MuscleMiddle] = new X2FDiscreteFunction<float>(this.curves[0]);
+            this.activationData.Activations[Spring.Type.MuscleBack] = new X2FDiscreteFunction<float>(this.curves[1]);
         }
 
         protected void UpdateTraj()
@@ -70,7 +63,7 @@ namespace UnityFishSimulation
             this.InitActivations();
             this.UpdateAnimations();
 
-            var problem = new FishSimulator.Problem(this.activations);
+            var problem = new FishSimulator.Problem(this.activationData.Activations);
             var delta = new FishSimulator.Delta();
 
             this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
@@ -87,10 +80,9 @@ namespace UnityFishSimulation
                 this.simulator.StartSimulation();
             }
 
-
             if (this.mode == Mode.Manual)
             {
-                foreach (var a in this.activations.Values)
+                foreach (var a in this.activationData.Activations.Values)
                 {
                     foreach (var i in System.Linq.Enumerable.Range(0, this.sampleNum))
                     {
