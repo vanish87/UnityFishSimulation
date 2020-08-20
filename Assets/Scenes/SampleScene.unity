@@ -137,7 +137,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &130941396
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -158,6 +158,10 @@ MonoBehaviour:
   sampleNum: 15
   curves: []
   traj: []
+  simulator:
+    runtimeList: []
+    runtimeMuscleList: []
+    runtimeSpringList: []
 --- !u!4 &130941397
 Transform:
   m_ObjectHideFlags: 0
@@ -508,7 +512,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2120106927}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c22bc69dbe2917b43af29f904cbdf1d2, type: 3}
   m_Name: 
@@ -544,7 +548,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2120106927}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 27190fc8009bee5448d6e40413ad49c6, type: 3}
   m_Name: 
@@ -559,6 +563,10 @@ MonoBehaviour:
     y: 0.075
   - x: 0
     y: 0.075
+  fishSimulator:
+    runtimeList: []
+    runtimeMuscleList: []
+    runtimeSpringList: []
   timeInterval:
     x: 0
     y: 50

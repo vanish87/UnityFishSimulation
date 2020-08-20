@@ -119,9 +119,18 @@ namespace UnityFishSimulation
         protected SolverType solverType = SolverType.Euler;
         protected IAlgorithm solver;
 
-        public FishSimulator(SolverType type, IProblem problem, IDelta dt) : base(problem, dt)
+
+        [SerializeField] protected List<MassPoint> runtimeList;
+        [SerializeField] protected List<Spring> runtimeMuscleList;
+        [SerializeField] protected List<Spring> runtimeSpringList;
+
+        public FishSimulator(
+            SolverType type, 
+            IProblem problem, 
+            IDelta dt, 
+            IterationAlgorithmMode mode = IterationAlgorithmMode.FullStep) : base(problem, dt, mode)
         {
-            this.solverType = type;
+            this.solverType = type; 
         }
 
         public void StartSimulation()
@@ -133,6 +142,15 @@ namespace UnityFishSimulation
         {
             var p = this.problem as Problem;
             p.ReloadData();
+
+            this.runtimeList        = p.FishData.FishGraph.Nodes.ToList();
+            this.runtimeSpringList  = p.FishData.FishGraph.Edges.ToList();
+            this.runtimeMuscleList  = p.FishData.GetSpringByType(
+                                                new List<Spring.Type>{
+                                                    Spring.Type.MuscleBack,
+                                                    Spring.Type.MuscleMiddle,
+                                                    Spring.Type.MuscleFront }
+                                                );
 
             if (this.solverType == SolverType.Euler)
             {

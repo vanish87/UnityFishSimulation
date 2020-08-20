@@ -3,19 +3,21 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityTools.Algorithm;
 using UnityTools.Math;
 
 namespace UnityFishSimulation
 {
     public class FishModelPreview : MonoBehaviour
     {
-        public enum Mode
+        public enum ControlMode
         {
             Manual,
             Activations,
         }
 
-        [SerializeField] protected Mode mode = Mode.Activations;
+        [SerializeField] protected ControlMode mode = ControlMode.Activations;
+        [SerializeField] protected IterationAlgorithmMode stepMode = IterationAlgorithmMode.FullStep;
         [SerializeField, Range(0, 1)] protected float activation = 0.5f;
         [SerializeField] protected float2 timeInterval = new float2(0, 20);
         [SerializeField] protected int sampleNum = 15;
@@ -23,7 +25,7 @@ namespace UnityFishSimulation
 
         [SerializeField] protected List<float3> traj = new List<float3>();
 
-        protected FishSimulator simulator;
+        [SerializeField] protected FishSimulator simulator;
         protected FishActivationData activationData;
         
         protected void InitActivations()
@@ -66,7 +68,7 @@ namespace UnityFishSimulation
             var problem = new FishSimulator.Problem(this.activationData.Activations);
             var delta = new FishSimulator.Delta();
 
-            this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
+            this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta, this.stepMode);
             this.simulator.StartSimulation();
         }
 
@@ -80,7 +82,7 @@ namespace UnityFishSimulation
                 this.simulator.StartSimulation();
             }
 
-            if (this.mode == Mode.Manual)
+            if (this.mode == ControlMode.Manual)
             {
                 foreach (var a in this.activationData.Activations.Values)
                 {
@@ -89,6 +91,13 @@ namespace UnityFishSimulation
                         a[i] = this.activation;
                     }
                 }
+            }
+
+            this.simulator.RunMode = this.stepMode;
+
+            if (Input.GetKey(KeyCode.S))
+            {
+                this.simulator.TryToRun();
             }
         }
 
