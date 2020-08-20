@@ -120,10 +120,15 @@ namespace UnityFishSimulation
                 catch (System.Exception e)
                 {
                     LogTool.Log(e.ToString(), LogLevel.Error);
+                }
 
+                if (fish == null)
+                {
                     fish = new FishModelData();
                     InitNewFishModel(fish);
+                    Save(fish);
                 }
+
                 return fish.DeepCopy();
             }
         }

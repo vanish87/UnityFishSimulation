@@ -214,14 +214,7 @@ namespace UnityFishSimulation
                 sol.min.Print();
             });
         }
-
-        protected void OnDisable()
-        {
-            this.simplex.ChangeState(this.simplex.Done);
-            this.simplex.StopThread();
-            this.simulator?.StopThread();
-        }
-
+        
         protected void Update()
         {
             if(Input.GetKeyDown(KeyCode.U))

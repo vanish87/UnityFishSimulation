@@ -24,7 +24,7 @@ namespace UnityFishSimulation
         [SerializeField] protected List<Spring> runtimeMuscleList;
         [SerializeField] protected List<Spring> runtimeSpringList;
 
-        protected GraphAdj<MassPoint, Spring> FishGraph { get => this.fishData.FishGraph; }
+        //protected GraphAdj<MassPoint, Spring> FishGraph { get => this.fishData.FishGraph; }
 
         protected float3 totalForce;
 
@@ -43,8 +43,8 @@ namespace UnityFishSimulation
 
         protected void RefreshRuntimeList()
         {
-            this.runtimeList = this.FishGraph.Nodes.ToList();
-            this.runtimeSpringList = this.FishGraph.Edges.ToList();
+            //this.runtimeList = this.FishGraph.Nodes.ToList();
+            //this.runtimeSpringList = this.FishGraph.Edges.ToList();
             this.runtimeMuscleList = this.GetSpringByType(
                 new List<Spring.Type>{
                     Spring.Type.MuscleBack,
