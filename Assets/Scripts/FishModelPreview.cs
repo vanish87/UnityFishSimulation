@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityTools.Algorithm;
+using UnityTools.Debuging.EditorTool;
 using UnityTools.Math;
 
 namespace UnityFishSimulation
@@ -108,11 +109,14 @@ namespace UnityFishSimulation
 
         protected void OnDrawGizmos()
         {
-            this.simulator?.OnGizmos();
-
-            for(var i = 0; i < this.traj.Count-1; ++i)
+            using (new GizmosScope(Color.white, this.transform.localToWorldMatrix))
             {
-                Gizmos.DrawLine(this.traj[i], this.traj[i + 1]);
+                this.simulator?.OnGizmos();
+                
+                for (var i = 0; i < this.traj.Count - 1; ++i)
+                {
+                    Gizmos.DrawLine(this.traj[i], this.traj[i + 1]);
+                }
             }
         }
 
