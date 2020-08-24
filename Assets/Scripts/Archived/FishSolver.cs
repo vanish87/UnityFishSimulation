@@ -38,18 +38,18 @@ namespace UnityFishSimulation
             return default;
         }
 
-        public void PreSolve(FishModelData fish)
+        protected void PreSolve(FishModelData fish)
         {
             foreach (var n in fish.FishGraph.Nodes) n.Force = 0;
         }
-        public void ApplyForces(FishModelData fish)
+        protected void ApplyForces(FishModelData fish)
         {
             this.ApplySpringForce(fish);
             this.ApplyDumpingForce(fish);
             this.ApplyFluidForce(fish);
         }
 
-        public void Intergrate(FishModelData fish, float dt)
+        protected void Intergrate(FishModelData fish, float dt)
         {
             foreach (var n in fish.FishGraph.Nodes)
             {
@@ -58,7 +58,7 @@ namespace UnityFishSimulation
             }
         }
 
-        public void PostSolve(FishModelData fish)
+        protected void PostSolve(FishModelData fish)
         {
         }
 

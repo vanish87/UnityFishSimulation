@@ -75,12 +75,13 @@ namespace UnityFishSimulation
             protected FishActivationData fishActivationData;
             protected float2 interval;
             protected int sampleNum;
-            public Problem(int dim, float2 interval, int sampleNum) : base(dim)
+            public Problem(float2 interval, int sampleNum) : base(0)
             {
                 this.interval = interval;
                 this.sampleNum = sampleNum;
 
                 this.fishActivationData = new FishActivationData(this.interval, this.sampleNum);
+                this.dim = this.fishActivationData.Activations.Count * this.sampleNum;
             }
 
             public override float Evaluate(Vector<float> x)
@@ -186,7 +187,6 @@ namespace UnityFishSimulation
         [SerializeField] protected float2 timeInterval = new float2(0, 20);
         [SerializeField] protected int sampleNum = 15;
 
-        protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
         protected DownhillSimplex<float> simplex;
         protected DownhillSimplex<float>.Problem p;
         protected DownhillSimplex<float>.Solution sol;
@@ -198,11 +198,7 @@ namespace UnityFishSimulation
 
         protected void Start()
         {
-            this.InitActivations();
-
-            var dim = this.activations.Count * this.sampleNum;
-
-            p = new Problem(dim, this.timeInterval, this.sampleNum);
+            p = new Problem(this.timeInterval, this.sampleNum);
             var d = new Delta();
             this.simplex = new DownhillSimplex<float>(p, d);
             this.simplex.TryToRun();
@@ -220,9 +216,9 @@ namespace UnityFishSimulation
             if(Input.GetKeyDown(KeyCode.U))
             {
                 var sol = (this.simplex.CurrentSolution) as DownhillSimplex<float>.Solution;
-                this.activations = FishActivationData.VectorToActivation(FishActivationData.Type.Swimming, sol.min.X, this.timeInterval, this.sampleNum);
+                var activations = FishActivationData.VectorToActivation(FishActivationData.Type.Swimming, sol.min.X, this.timeInterval, this.sampleNum);
 
-                var problem = new FishSimulator.Problem(this.activations);
+                var problem = new FishSimulator.Problem(activations);
                 var delta = new FishSimulator.Delta();
 
                 if(this.simulator != null)this.simulator.StopThread();
@@ -230,7 +226,7 @@ namespace UnityFishSimulation
                 this.simulator.StartSimulation();
 
                 this.curves.Clear();
-                foreach(var act in this.activations.Values)
+                foreach(var act in activations.Values)
                 {
                     this.curves.Add(act.ToAnimationCurve());
                 }
@@ -242,22 +238,6 @@ namespace UnityFishSimulation
             this.simulator?.OnGizmos();
         }
 
-        protected void InitActivations()
-        {
-            this.activations.Clear();
-
-            var start = new Tuple<float, float>(this.timeInterval.x, 0.5f);
-            var end = new Tuple<float, float>(this.timeInterval.y, 0.5f);
-
-            //this.activations.Add(Spring.Type.MuscleFront, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
-            this.activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, this.sampleNum));
-            this.activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, this.sampleNum));
-
-            foreach (var fun in this.activations.Values)
-            {
-                fun.RandomValues();
-            }
-        }
 
     }
 }
