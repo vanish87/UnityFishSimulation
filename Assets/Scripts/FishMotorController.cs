@@ -10,7 +10,8 @@ using static UnityFishSimulation.FishSAOptimizer.FishSA;
 
 namespace UnityFishSimulation
 {
-    public class MotorController : MonoBehaviour
+    [Serializable]
+    public class FishMotorController
     {
         public const float Smax = 0.075f;
 
@@ -26,5 +27,19 @@ namespace UnityFishSimulation
             new float2(0,Smax),
             new float2(0,Smax),
         };
+    }
+
+    [Serializable]
+    public class FishSwimmingMC:FishMotorController
+    {
+        [SerializeField] protected float speed = 1;
+    }
+
+    [Serializable]
+    public class FishTurnMC : FishMotorController
+    {
+        //left is negative
+        //right is positive
+        [SerializeField] protected int angle = 0;
     }
 }
