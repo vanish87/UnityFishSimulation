@@ -136,7 +136,7 @@ namespace UnityFishSimulation
                     this.activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
                     this.activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
 
-                    problem = new FishSimulator.Problem(this.activations);
+                    problem = new FishSimulator.Problem(FishActivationData.Type.Swimming);
                     var delta = new FishSimulator.Delta();
 
                     this.simulator = new FishSimulator(FishSimulator.SolverType.Euler,problem, delta);
@@ -226,8 +226,8 @@ namespace UnityFishSimulation
                 var current = p.Current as FishStateData;
                 var next = p.Next as FishStateData;
 
-                current.simulator.StartSimulation();
-                next.simulator.StartSimulation();
+                current.simulator.TryToRun();
+                next.simulator.TryToRun();
 
                 this.ChangeState(this.Running);
             }
@@ -265,7 +265,7 @@ namespace UnityFishSimulation
                         next = p.Next as FishStateData;
                     }
                     next.UpdateNewValue();
-                    next.simulator.StartSimulation();
+                    next.simulator.TryToRun();
                 }
 
                 return sol;

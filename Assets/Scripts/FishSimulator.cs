@@ -23,31 +23,36 @@ namespace UnityFishSimulation
         public class Problem : IProblem
         {
             protected FishModelData fish;
-
-            protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations;
+            protected FishActivationData activations;
 
             public FishModelData FishData { get => this.fish; }
-            public float From { get => this.activations.FirstOrDefault().Value.Start.Item1; }
-            public float To { get => this.activations.FirstOrDefault().Value.End.Item1; }
-            public int SampleNum { get => this.activations.FirstOrDefault().Value.SampleNum; }
+            public float From { get => this.activations.Activations.FirstOrDefault().Value.Start.Item1; }
+            public float To { get => this.activations.Activations.FirstOrDefault().Value.End.Item1; }
+            public int SampleNum { get => this.activations.Activations.FirstOrDefault().Value.SampleNum; }
 
-            public Problem(Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations)
+            public Problem(FishActivationData.Type type)
+            {
+                this.activations = FishActivationData.Load(type.ToString());
+                this.ReloadData();
+            }
+            public Problem(FishActivationData activations)
             {
                 this.activations = activations;
                 this.ReloadData();
             }
 
-            public void ReloadData()
+            public virtual void ReloadData()
             {
                 this.fish = GeometryFunctions.Load();
             }
 
-            internal protected void ApplyActivations(Spring.Type type, IDelta dt)
+            internal protected virtual void ApplyActivations(Spring.Type type, IDelta dt)
             {
                 var t = (dt as Delta).current;
                 var muscle = this.fish.GetSpringByType(new List<Spring.Type>() { type });
                 var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
                 var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
+                var activations = this.activations.Activations;
 
                 if (activations.ContainsKey(type))
                 {
@@ -133,10 +138,10 @@ namespace UnityFishSimulation
             this.solverType = type; 
         }
 
-        public void StartSimulation()
+        public override void TryToRun()
         {
             this.ResetData();
-            this.TryToRun();
+            base.TryToRun();
         }
         public void ResetData()
         {

@@ -204,7 +204,7 @@ namespace UnityFishSimulation
             var mesh = FunctionTool.GenerateFunctionMesh(p);
             meshFiter.mesh = mesh;*/
 
-            var p2 = this.p as Problem2;
+            /*var p2 = this.p as Problem2;
             if (p2 != null)
             {
                 var fp = new FishSimulator.Problem(p2.activations);
@@ -212,7 +212,7 @@ namespace UnityFishSimulation
 
                 this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, fp, delta);
                 this.simulator.StartSimulation();
-            }
+            }*/
         }
 
         protected void OnDestroy()
@@ -254,7 +254,7 @@ namespace UnityFishSimulation
                     kcount++;
                 }
 
-                if (this.simulator.IsSimulationDone()) this.simulator.StartSimulation();
+                if (this.simulator.IsSimulationDone()) this.simulator.TryToRun();
 
 
                 this.curves.Clear();

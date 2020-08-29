@@ -41,7 +41,7 @@ namespace UnityFishSimulation
 
             return ret;
         }
-        public static Dictionary<Spring.Type, X2FDiscreteFunction<float>> VectorToActivation(Type type, Vector<float> x, float2 interval, int sampleNum)
+        protected static Dictionary<Spring.Type, X2FDiscreteFunction<float>> VectorToActivation(Type type, Vector<float> x, float2 interval, int sampleNum)
         {
             var activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
 
@@ -53,6 +53,46 @@ namespace UnityFishSimulation
                 count++;
             }
             return activations;
+        }
+
+        public static void UpdateFFT(Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations, int fftLevel = 1)
+        {
+            foreach (var func in activations.Values)
+            {
+                var vector = func.ToYVector();
+
+                var array = vector.Select(s => (double)s).ToArray();
+                var dft = new DFT();
+
+                dft.Initialize((uint)array.Length);
+                Complex[] cSpectrum = dft.Execute(array);
+
+                var An = DSP.ConvertComplex.ToMagnitude(cSpectrum);
+                var Pn = DSP.ConvertComplex.ToPhaseRadians(cSpectrum);
+
+                for (var i = 0; i < func.SampleNum; ++i)
+                {
+                    var x = 2 * math.PI * i / (func.SampleNum - 1);
+                    func[i] = GetFx(An, Pn, x, fftLevel);
+                }
+            }
+        }
+        protected static float GetFx(double[] An, double[] Pn, float x, int level = 1, bool ordered = false)
+        {
+            var orderedAn = ordered ? An : An.OrderByDescending(a => a).ToArray();
+
+            var count = 0;
+            var ret = 0f;
+            for (int i = 0; i < An.Length && count++ < level + 1; ++i)
+            {
+                var an = orderedAn[i];
+                var id = An.ToList().IndexOf(an);
+                var pn = Pn[id];
+
+                if (math.abs(an) <= 0.01f) continue;
+                ret += (float)(an * math.cos(id * x + pn));
+            }
+            return ret;
         }
 
         public enum Type
@@ -68,6 +108,23 @@ namespace UnityFishSimulation
         protected Type type = Type.Swimming;
 
         protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations;
+
+        public static void Save(FishActivationData data)
+        {
+            var fileName = data.type.ToString() + ".ad";
+            var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
+            FileTool.Write(path, data);
+            LogTool.Log("Saved " + path);
+        }
+
+        public static FishActivationData Load(string fileName)
+        {
+            fileName += ".ad";
+            var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
+            var ret = FileTool.Read<FishActivationData>(path);
+            LogTool.Log("Loaded " + path);
+            return ret;
+        }
 
         public Dictionary<Spring.Type, X2FDiscreteFunction<float>> Activations { get => this.activations; }
 
@@ -189,12 +246,12 @@ namespace UnityFishSimulation
                             FishSimulator simulator = null;
                             if (useSim)
                             {
-                                var problem = new FishSimulator.Problem(this.activationData.Activations);
+                                var problem = new FishSimulator.Problem(this.activationData);
                                 var delta = new FishSimulator.Delta();
 
 
                                 simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
-                                simulator.StartSimulation();
+                                simulator.TryToRun();
 
                                 //Debug.Log("start");
                                 //start new simulation to get trajactory
@@ -308,12 +365,12 @@ namespace UnityFishSimulation
                 FishSimulator simulator = null;
                 if (useSim)
                 {
-                    var problem = new FishSimulator.Problem(this.fishActivationData.Activations);
+                    var problem = new FishSimulator.Problem(this.fishActivationData);
                     var delta = new FishSimulator.Delta();
 
 
                     simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
-                    simulator.StartSimulation();
+                    simulator.TryToRun();
 
                     //Debug.Log("start");
                     //start new simulation to get trajactory
@@ -410,17 +467,19 @@ namespace UnityFishSimulation
 
         }
 
-        protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> GetActivationData()
+        protected FishActivationData GetActivationData()
         {
             if (this.algprithm.CurrentSolution is DownhillSimplex<float>.Solution)
             {
                 var sol = (this.algprithm.CurrentSolution) as DownhillSimplex<float>.Solution;
-                return FishActivationData.VectorToActivation(FishActivationData.Type.Swimming, sol.min.X, this.timeInterval, this.sampleNum);
+                var ret = new FishActivationData(this.timeInterval, this.sampleNum);
+                ret.UpdateFromVector(sol.min.X);
+                return ret;
             }
             else
             {
                 var problem = (this.p) as SAProblem;
-                return (problem.Current as SAProblem.ActivationState.Data).ActivationData.Activations;
+                return (problem.Current as SAProblem.ActivationState.Data).ActivationData;
             }
         }
 
@@ -439,53 +498,14 @@ namespace UnityFishSimulation
 
             return ret;
         }
-        protected float GetFx(double[] An, double[] Pn, float x, int level = 1)
-        {
-            var orderedAn = An.OrderByDescending(a => a).ToList();
-
-            var count = 0;
-            var ret = 0f;
-            for (int i = 0; i < An.Length && count++ < level + 1; ++i)
-            {
-                var an = orderedAn[i];
-                var id = An.ToList().IndexOf(an);
-                var pn = Pn[id];
-
-                if (math.abs(an) <= 0.01f) continue;
-                ret += (float)(an * math.cos(id * x + pn));
-            }
-            return ret;
-        }
-
-        protected void UpdateFFT(Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations)
-        {
-            foreach(var func in activations.Values)
-            {
-                var vector = func.ToYVector();
-
-                var array = vector.Select(s => (double)s).ToArray();
-                var dft = new DFT();
-
-                dft.Initialize((uint)array.Length);
-                Complex[] cSpectrum = dft.Execute(array);
-
-                var An = DSP.ConvertComplex.ToMagnitude(cSpectrum);
-                var Pn = DSP.ConvertComplex.ToPhaseRadians(cSpectrum);
-
-                for (var i = 0; i < func.SampleNum; ++i)
-                {
-                    var x = 2 * math.PI * i / (func.SampleNum - 1);
-                    func[i] = this.GetFx(An, Pn, x, this.fftLevel);
-                }
-            }
-        }
+        
 
         protected void Start()
         {
             this.StartSA(new SAProblem(this.timeInterval, this.sampleNum));
         }
 
-        Dictionary<Spring.Type, X2FDiscreteFunction<float>> current;
+        FishActivationData current;
         protected void Update()
         {
             if (Input.GetKeyDown(KeyCode.R))
@@ -495,7 +515,7 @@ namespace UnityFishSimulation
 
                 if (this.simulator != null) this.simulator.Dispose();
                 this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
-                this.simulator.StartSimulation();
+                this.simulator.TryToRun();
             }
             if (Input.GetKeyDown(KeyCode.U))
             {
@@ -503,7 +523,7 @@ namespace UnityFishSimulation
 
                 var compare = activations.DeepCopy();
 
-                this.UpdateFFT(activations);
+                FishActivationData.UpdateFFT(activations.Activations, this.fftLevel);
 
                 this.current = activations;
 
@@ -512,16 +532,16 @@ namespace UnityFishSimulation
 
                 if(this.simulator != null)this.simulator.Dispose();
                 this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
-                this.simulator.StartSimulation();
+                this.simulator.TryToRun();
 
                 this.curves.Clear();
-                foreach(var act in activations.Values)
+                foreach(var act in activations.Activations.Values)
                 {
                     this.curves.Add(act.ToAnimationCurve());
                 }
 
 
-                foreach (var act in compare.Values)
+                foreach (var act in compare.Activations.Values)
                 {
                     this.curves.Add(act.ToAnimationCurve());
                 }
@@ -534,6 +554,12 @@ namespace UnityFishSimulation
                 {
                     this.SaveData(problem, this.fileName);
                 }
+            }
+            if (Input.GetKeyDown(KeyCode.D))
+            {
+                var problem = (this.p) as SAProblem;
+                var act = (problem.Current as SAProblem.ActivationState.Data).ActivationData;
+                FishActivationData.Save(act);
             }
             if(Input.GetKeyDown(KeyCode.L))
             {

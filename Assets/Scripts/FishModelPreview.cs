@@ -66,11 +66,11 @@ namespace UnityFishSimulation
             this.InitActivations();
             this.UpdateAnimations();
 
-            var problem = new FishSimulator.Problem(this.activationData.Activations);
+            var problem = new FishSimulator.Problem(this.activationData);
             var delta = new FishSimulator.Delta();
 
             this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta, this.stepMode);
-            this.simulator.StartSimulation();
+            this.simulator.TryToRun();
         }
 
         protected void Update()
@@ -80,7 +80,7 @@ namespace UnityFishSimulation
                 this.UpdateTraj();
 
                 this.UpdateAnimationsFunctions();
-                this.simulator.StartSimulation();
+                this.simulator.TryToRun();
             }
 
             if (this.mode == ControlMode.Manual)
