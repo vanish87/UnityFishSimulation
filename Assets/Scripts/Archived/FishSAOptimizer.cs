@@ -136,10 +136,10 @@ namespace UnityFishSimulation
                     this.activations.Add(Spring.Type.MuscleMiddle, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
                     this.activations.Add(Spring.Type.MuscleBack, new X2FDiscreteFunction<float>(start, end, this.sampleSize));
 
-                    problem = new FishSimulator.Problem(FishActivationData.Type.Swimming);
+                    /*problem = new FishSimulator.Problem();
                     var delta = new FishSimulator.Delta();
 
-                    this.simulator = new FishSimulator(FishSimulator.SolverType.Euler,problem, delta);
+                    this.simulator = new FishSimulator(FishSimulator.SolverType.Euler,problem, delta);*/
                 }
             }
             public class FishState : CricleData<FishStateData, int>

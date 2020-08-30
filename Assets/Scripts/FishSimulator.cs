@@ -6,6 +6,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityTools;
 using UnityTools.Algorithm;
+using UnityTools.Debuging;
 using UnityTools.Math;
 
 namespace UnityFishSimulation
@@ -22,22 +23,21 @@ namespace UnityFishSimulation
         [Serializable]
         public class Problem : IProblem
         {
-            protected FishModelData fish;
-            protected FishActivationData activations;
-
             public FishModelData FishData { get => this.fish; }
-            public float From { get => this.activations.Activations.FirstOrDefault().Value.Start.Item1; }
-            public float To { get => this.activations.Activations.FirstOrDefault().Value.End.Item1; }
-            public int SampleNum { get => this.activations.Activations.FirstOrDefault().Value.SampleNum; }
+            public FishActivationData Current { get { return this.fishActivationDatas.Peek(); } }
+            protected FishModelData fish;
+            protected Queue<FishActivationData> fishActivationDatas = new Queue<FishActivationData>();
 
-            public Problem(FishActivationData.Type type)
+            internal protected bool IsDone { get; set; }
+
+            public Problem()
             {
-                this.activations = FishActivationData.Load(type.ToString());
+                this.fishActivationDatas.Enqueue(FishActivationData.Load());
                 this.ReloadData();
             }
             public Problem(FishActivationData activations)
             {
-                this.activations = activations;
+                this.fishActivationDatas.Enqueue(activations);
                 this.ReloadData();
             }
 
@@ -45,14 +45,18 @@ namespace UnityFishSimulation
             {
                 this.fish = GeometryFunctions.Load();
             }
-
+            
             internal protected virtual void ApplyActivations(Spring.Type type, IDelta dt)
             {
                 var t = (dt as Delta).current;
                 var muscle = this.fish.GetSpringByType(new List<Spring.Type>() { type });
                 var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
                 var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
-                var activations = this.activations.Activations;
+
+                var data = this.Current;
+                LogTool.LogAssertIsTrue(data != null, "fishActivationDatas is empty");
+
+                var activations = data.Activations;
 
                 if (activations.ContainsKey(type))
                 {
@@ -73,9 +77,14 @@ namespace UnityFishSimulation
                 }
             }
 
-            internal protected bool IsTimePassed(float time)
+            internal protected void Update(Solution solution, Delta dt)
             {
-                return time > this.To;
+                var data = this.Current;
+                this.IsDone = dt.current > data.Activations.Values.First().End.Item1;
+                if (this.IsDone && this.fishActivationDatas.Count > 1)
+                {
+                    this.fishActivationDatas.Dequeue();
+                }
             }
         }
         [Serializable]
@@ -85,21 +94,22 @@ namespace UnityFishSimulation
             internal protected DiscreteFunction<float, float3> velocity;
             protected int currentIndex;
 
-            public Solution(float from, float to, int sampleNum)
+            public Solution(Problem p)
             {
-                var start = new Tuple<float, float3>(from, float3.zero);
-                var end = new Tuple<float, float3>(to, float3.zero);
-                trajactory = new DiscreteFunction<float, float3>(start, end, sampleNum);
-                velocity = new DiscreteFunction<float, float3>(start, end, sampleNum);
+                var act = p.Current.Activations.Values.First();
+                var start = new Tuple<float, float3>(act.Start.Item1, float3.zero);
+                var end = new Tuple<float, float3>(act.End.Item1, float3.zero);
+                trajactory = new DiscreteFunction<float, float3>(start, end, act.SampleNum);
+                velocity = new DiscreteFunction<float, float3>(start, end, act.SampleNum);
                 currentIndex = 0;
             }
 
-            public void UpdateSolution(Problem problem, Delta dt)
+            internal protected void Update(Problem p, Delta dt)
             {
                 if (dt.current > this.trajactory.GetValueX(this.currentIndex))
                 {
-                    this.trajactory[this.currentIndex] = problem.FishData.Head.Position;
-                    this.velocity[this.currentIndex] = problem.FishData.Velocity;
+                    this.trajactory[this.currentIndex] = p.FishData.Head.Position;
+                    this.velocity[this.currentIndex] = p.FishData.Velocity;
                     this.currentIndex++;
                 }
             }
@@ -138,11 +148,12 @@ namespace UnityFishSimulation
             this.solverType = type; 
         }
 
-        public override void TryToRun()
+        public void ResetAndRun()
         {
             this.ResetData();
-            base.TryToRun();
+            this.TryToRun();
         }
+
         public void ResetData()
         {
             var p = this.problem as Problem;
@@ -166,7 +177,7 @@ namespace UnityFishSimulation
                 this.solver = new FishMatrixSolver();
             }
 
-            this.currentSolution = new Solution(p.From, p.To, p.SampleNum);
+            this.currentSolution = new Solution(p);
         }
 
         public bool IsSimulationDone()
@@ -176,16 +187,14 @@ namespace UnityFishSimulation
 
         public override bool IsSolutionAcceptable(ISolution solution)
         {
-            var d = this.dt as Delta;
-            var p = this.problem as Problem;
-            return p.IsTimePassed(d.current);
+            return (this.problem as Problem).IsDone;
         }
 
         public override ISolution Solve(IProblem problem)
         {
             var p = problem as Problem;
             var d = this.dt as Delta;
-            var sol = this.CurrentSolution as Solution;
+            var s = this.CurrentSolution as Solution;
             p.ApplyActivations(Spring.Type.MuscleFront, dt);
             p.ApplyActivations(Spring.Type.MuscleMiddle, dt);
             p.ApplyActivations(Spring.Type.MuscleBack, dt);
@@ -193,7 +202,8 @@ namespace UnityFishSimulation
             //Step fish data once
             this.solver.Solve(new FishStructureProblem() { fish = p.FishData, dt = Delta.dt });
 
-            sol.UpdateSolution(p, d);
+            p.Update(s, d);
+            s.Update(p, d);
             
             return this.CurrentSolution;
         }

@@ -31,7 +31,7 @@ namespace UnityFishSimulation
         
         protected void InitActivations()
         {
-            this.activationData = new FishActivationData(this.timeInterval, this.sampleNum);
+            this.activationData = new FishActivationDataSwimming(this.timeInterval, this.sampleNum);
 
             foreach (var fun in this.activationData.Activations.Values)
             {
@@ -70,7 +70,7 @@ namespace UnityFishSimulation
             var delta = new FishSimulator.Delta();
 
             this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta, this.stepMode);
-            this.simulator.TryToRun();
+            this.simulator.ResetAndRun();
         }
 
         protected void Update()
@@ -80,7 +80,7 @@ namespace UnityFishSimulation
                 this.UpdateTraj();
 
                 this.UpdateAnimationsFunctions();
-                this.simulator.TryToRun();
+                this.simulator.ResetAndRun();
             }
 
             if (this.mode == ControlMode.Manual)
@@ -99,6 +99,10 @@ namespace UnityFishSimulation
             if (Input.GetKey(KeyCode.S))
             {
                 this.simulator.TryToRun();
+            }
+            if (Input.GetKey(KeyCode.R))
+            {
+                this.simulator.ResetAndRun();
             }
         }
 

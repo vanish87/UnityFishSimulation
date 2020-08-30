@@ -16,36 +16,25 @@ using UnityTools.Math;
 namespace UnityFishSimulation
 {
     [Serializable]
-    public class FishActivationData
+    public class FishActivationDataSwimming: FishActivationData
     {
-        public static List<Spring.Type> GetSprtingTypes(Type type)
+        [SerializeField] protected float speed = 1;
+        protected override string FileName => "Swimming";
+        protected override List<Spring.Type> GetSprtingTypes()
         {
-            var ret = new List<Spring.Type>();
-            switch (type)
-            {
-                case Type.Swimming:
-                    {
-                        ret.Add(Spring.Type.MuscleMiddle);
-                        ret.Add(Spring.Type.MuscleBack);
-                    }
-                    break;
-                case Type.TurnLeft:
-                case Type.TurnRight:
-                    {
-                        ret.Add(Spring.Type.MuscleFront);
-                        ret.Add(Spring.Type.MuscleMiddle);
-                    }
-                    break;
-                default: break;
-            }
-
-            return ret;
+            return new List<Spring.Type>() { Spring.Type.MuscleMiddle, Spring.Type.MuscleBack };
         }
-        protected static Dictionary<Spring.Type, X2FDiscreteFunction<float>> VectorToActivation(Type type, Vector<float> x, float2 interval, int sampleNum)
+
+        public FishActivationDataSwimming(float2 interval, int sampleNum = 15) : base(interval, sampleNum) { }
+    }
+    [Serializable]
+    public abstract class FishActivationData
+    {
+        protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> VectorToActivation(Vector<float> x, float2 interval, int sampleNum)
         {
             var activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
 
-            var types = GetSprtingTypes(type);
+            var types = this.GetSprtingTypes();
             var count = 0;
             foreach(var t in types)
             {
@@ -55,7 +44,7 @@ namespace UnityFishSimulation
             return activations;
         }
 
-        public static void UpdateFFT(Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations, int fftLevel = 1)
+        public static void UpdateFFT(Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations, int fftLevel = 1, bool ordered = false)
         {
             foreach (var func in activations.Values)
             {
@@ -73,7 +62,7 @@ namespace UnityFishSimulation
                 for (var i = 0; i < func.SampleNum; ++i)
                 {
                     var x = 2 * math.PI * i / (func.SampleNum - 1);
-                    func[i] = GetFx(An, Pn, x, fftLevel);
+                    func[i] = GetFx(An, Pn, x, fftLevel, ordered);
                 }
             }
         }
@@ -94,30 +83,25 @@ namespace UnityFishSimulation
             }
             return ret;
         }
-
-        public enum Type
-        {
-            Swimming,
-            TurnLeft,
-            TurnRight,
-        }
         public int SampleNum { get => this.sampleNum; }
 
         protected float2 interval;
         protected int sampleNum;
-        protected Type type = Type.Swimming;
 
         protected Dictionary<Spring.Type, X2FDiscreteFunction<float>> activations;
 
+        protected abstract List<Spring.Type> GetSprtingTypes();
+        protected abstract string FileName { get; }
+
         public static void Save(FishActivationData data)
         {
-            var fileName = data.type.ToString() + ".ad";
+            var fileName = data.FileName + ".ad";
             var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
             FileTool.Write(path, data);
             LogTool.Log("Saved " + path);
         }
 
-        public static FishActivationData Load(string fileName)
+        public static FishActivationData Load(string fileName = "Swimming")
         {
             fileName += ".ad";
             var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
@@ -129,15 +113,14 @@ namespace UnityFishSimulation
         public Dictionary<Spring.Type, X2FDiscreteFunction<float>> Activations { get => this.activations; }
 
         public FishActivationData() : this(new float2(0,1)){}
-        public FishActivationData(float2 interval, int sampleNum = 15, Type type = Type.Swimming)
+        public FishActivationData(float2 interval, int sampleNum = 15)
         {
             this.interval = interval;
             this.sampleNum = sampleNum;
-            this.type = type;
 
             this.activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
 
-            var types = GetSprtingTypes(this.type);
+            var types = this.GetSprtingTypes();
             var start = new Tuple<float, float>(interval.x, 0);
             var end = new Tuple<float, float>(interval.y, 0);
             foreach (var t in types)
@@ -148,7 +131,7 @@ namespace UnityFishSimulation
 
         public void UpdateFromVector(Vector<float> x)
         {
-            this.activations = VectorToActivation(this.type, x, this.interval, this.sampleNum);
+            this.activations = this.VectorToActivation(x, this.interval, this.sampleNum);
         }
     }
     public class FishControlOptimizer : MonoBehaviour
@@ -212,10 +195,15 @@ namespace UnityFishSimulation
         [Serializable]
         public class SAProblem : SimulatedAnnealing.Problem
         {
-
+            public enum OptType
+            {
+                Swimming,
+                Turn,
+            }
             [Serializable]
             public class Paramter
             {
+                public OptType type;
                 public float2 interval;
                 public int sampleNum;
             }
@@ -234,7 +222,12 @@ namespace UnityFishSimulation
                     public Data() { Assert.IsTrue(false); }
                     public Data(Paramter para)
                     {
-                        this.activationData = new FishActivationData(para.interval, para.sampleNum);
+                        switch(para.type)
+                        {
+                            case OptType.Swimming: this.activationData = new FishActivationDataSwimming(para.interval, para.sampleNum);break;
+                            case OptType.Turn: this.activationData = new FishActivationDataSwimming(para.interval, para.sampleNum); break;
+                        }
+                        
                         this.Generate(this);
                     }
 
@@ -289,7 +282,7 @@ namespace UnityFishSimulation
                     }
                 }
 
-                public ActivationState(int size = 2, Paramter para = null) : base(size, para)
+                public ActivationState(Paramter para, int size = 2) : base(size, para)
                 {
                 }
 
@@ -305,9 +298,9 @@ namespace UnityFishSimulation
             public override SimulatedAnnealing.IState Next => this.state.Next;
 
             public SAProblem() { }
-            public SAProblem(float2 interval, int sampleNum) : base()
+            public SAProblem(float2 interval, int sampleNum, OptType type = OptType.Swimming) : base()
             {
-                this.state = new ActivationState(2, new Paramter() { interval = interval, sampleNum = sampleNum });
+                this.state = new ActivationState(new Paramter() { interval = interval, sampleNum = sampleNum, type = type });
             }
 
             public override void MoveToNext()
@@ -351,7 +344,7 @@ namespace UnityFishSimulation
                 this.interval = interval;
                 this.sampleNum = sampleNum;
 
-                this.fishActivationData = new FishActivationData(this.interval, this.sampleNum);
+                this.fishActivationData = new FishActivationDataSwimming(this.interval, this.sampleNum);
                 this.dim = this.fishActivationData.Activations.Count * this.sampleNum;
             }
 
@@ -472,7 +465,7 @@ namespace UnityFishSimulation
             if (this.algprithm.CurrentSolution is DownhillSimplex<float>.Solution)
             {
                 var sol = (this.algprithm.CurrentSolution) as DownhillSimplex<float>.Solution;
-                var ret = new FishActivationData(this.timeInterval, this.sampleNum);
+                var ret = new FishActivationDataSwimming(this.timeInterval, this.sampleNum);
                 ret.UpdateFromVector(sol.min.X);
                 return ret;
             }
