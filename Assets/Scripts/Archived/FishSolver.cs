@@ -47,6 +47,7 @@ namespace UnityFishSimulation
             this.ApplySpringForce(fish);
             this.ApplyDumpingForce(fish);
             this.ApplyFluidForce(fish);
+            this.ApplyFinForce(fish);
         }
 
         protected void Intergrate(FishModelData fish, float dt)
@@ -82,6 +83,14 @@ namespace UnityFishSimulation
             foreach (var face in fish.FishNormalFace)
             {
                 face.ApplyForceToNode(this.fluidForceScale);
+            }
+        }
+
+        protected void ApplyFinForce(FishModelData fish)
+        {
+            foreach (var fin in fish.FishPectoralFins)
+            {
+                fin.ApplyFinForce(fish.Velocity, fish.WordToLocalMatrix);
             }
         }
 

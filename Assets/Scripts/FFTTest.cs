@@ -20,7 +20,7 @@ namespace UnityFishSimulation
         [SerializeField] protected double[] An;
         [SerializeField] protected double[] Pn;
 
-        protected float GetFx(double[] An, double[] Pn, float x, int level = 1)
+        /*protected float GetFx(double[] An, double[] Pn, float x, int level = 1)
         {
             var orderedAn = An.OrderByDescending(a=>a).ToList();
 
@@ -36,7 +36,7 @@ namespace UnityFishSimulation
                 ret += (float)(an * math.cos(id * x + pn));
             }
             return ret;
-        }
+        }*/
         public SAProblem LoadData(string fileName = "SAProblem.data")
         {
             var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
@@ -53,7 +53,9 @@ namespace UnityFishSimulation
             var sa = this.LoadData();
             this.activationData = (sa.Current as SAProblem.ActivationState.Data).ActivationData;
 
-            var act = this.activationData.Activations[Spring.Type.MuscleMiddle];
+            this.activationData = FishActivationData.Load();
+
+            var act = this.activationData.ToDiscreteFunctions()[0];
             /*for(var i = 0; i < act.SampleNum; ++i)
             {
                 //act[i] = math.sin(2 * math.PI * i / (act.SampleNum-1) * 4);
@@ -90,7 +92,7 @@ namespace UnityFishSimulation
             {
                 var x = 2 * math.PI * i / (act.SampleNum - 1);
                 //function[i] = (float)(An[0] / 2 + maxAn * math.cos(maxIndex * x + maxPn));
-                function[i] = this.GetFx(An, Pn, x, sampleNum);
+                function[i] = FishActivationData.GetFx(An, Pn, x, 1);
             }
 
             this.curve2 = function.ToAnimationCurve();

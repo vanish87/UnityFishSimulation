@@ -150,7 +150,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d2256d7c43041443a14b36043d67268, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mode: 1
+  mode: 0
   stepMode: 1
   activation: 0.5
   timeInterval:
@@ -163,6 +163,7 @@ MonoBehaviour:
     runtimeList: []
     runtimeMuscleList: []
     runtimeSpringList: []
+    runtimeFinList: []
 --- !u!4 &130941397
 Transform:
   m_ObjectHideFlags: 0
@@ -492,6 +493,15 @@ MonoBehaviour:
     offset:
     - 0
     - 0.2
+    tuningData:
+    - springToDatas: []
+  Langle: 1.5707964
+  Rangle: 1.5707964
+  sim:
+    runtimeList: []
+    runtimeMuscleList: []
+    runtimeSpringList: []
+    runtimeFinList: []
 --- !u!4 &655708113
 Transform:
   m_ObjectHideFlags: 0

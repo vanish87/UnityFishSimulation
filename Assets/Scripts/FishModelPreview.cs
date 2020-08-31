@@ -33,16 +33,18 @@ namespace UnityFishSimulation
         {
             this.activationData = new FishActivationDataSwimming(this.timeInterval, this.sampleNum);
 
-            foreach (var fun in this.activationData.Activations.Values)
+            foreach (var fun in this.activationData.ToDiscreteFunctions())
             {
                 fun.RandomValues();
             }
+
+            this.activationData.GenerateFFTData();
         }
 
         protected void UpdateAnimations()
         {
             this.curves.Clear();
-            foreach(var func in this.activationData.Activations.Values)
+            foreach(var func in this.activationData.ToDiscreteFunctions())
             {
                 this.curves.Add(func.ToAnimationCurve());
             }
@@ -50,8 +52,8 @@ namespace UnityFishSimulation
 
         protected void UpdateAnimationsFunctions()
         {
-            this.activationData.Activations[Spring.Type.MuscleMiddle] = new X2FDiscreteFunction<float>(this.curves[0]);
-            this.activationData.Activations[Spring.Type.MuscleBack] = new X2FDiscreteFunction<float>(this.curves[1]);
+            this.activationData[Spring.Type.MuscleMiddle] = new X2FDiscreteFunction<float>(this.curves[0]);
+            this.activationData[Spring.Type.MuscleBack] = new X2FDiscreteFunction<float>(this.curves[1]);
         }
 
         protected void UpdateTraj()
@@ -85,7 +87,7 @@ namespace UnityFishSimulation
 
             if (this.mode == ControlMode.Manual)
             {
-                foreach (var a in this.activationData.Activations.Values)
+                foreach (var a in this.activationData.ToDiscreteFunctions())
                 {
                     foreach (var i in System.Linq.Enumerable.Range(0, this.sampleNum))
                     {

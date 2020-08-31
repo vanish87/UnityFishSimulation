@@ -45,6 +45,15 @@ namespace UnityFishSimulation
             {
                 this.fish = GeometryFunctions.Load();
             }
+
+            protected float ApplyTuning(TuningData.SpringToData data, float value)
+            {
+                value = math.clamp((value - 0.5f) * 2 * data.amplitude, -1, 1);
+                value = (value + 1) * 0.5f;
+                value += data.offset;
+                value = math.saturate(value);
+                return value;
+            }
             
             internal protected virtual void ApplyActivations(Spring.Type type, IDelta dt)
             {
@@ -56,23 +65,24 @@ namespace UnityFishSimulation
                 var data = this.Current;
                 LogTool.LogAssertIsTrue(data != null, "fishActivationDatas is empty");
 
-                var activations = data.Activations;
-
-                if (activations.ContainsKey(type))
+                if (data.HasType(type))
                 {
-                    var activation = activations[type];
+                    var tuning = data.Tuning.GetDataByType(type);
+                    var value = data.Evaluate(t * tuning.frequency, type) + 0.5f;
+                    var lvalue = this.ApplyTuning(tuning, value);
+                    var rvalue = this.ApplyTuning(tuning, 1 - value);
 
                     foreach (var l in muscleLeft)
                     {
                         //l.Activation = act;
                         //l.Activation = cos;// 
-                        l.Activation = activation.Evaluate(t);
+                        l.Activation = lvalue;
                     }
                     foreach (var r in muscleRight)
                     {
                         //r.Activation = 1 - act;
                         //r.Activation = 1 - cos;// 
-                        r.Activation = 1 - activation.Evaluate(t);
+                        r.Activation = rvalue;
                     }
                 }
             }
@@ -80,7 +90,7 @@ namespace UnityFishSimulation
             internal protected void Update(Solution solution, Delta dt)
             {
                 var data = this.Current;
-                this.IsDone = dt.current > data.Activations.Values.First().End.Item1;
+                this.IsDone = dt.current > data.ToDiscreteFunctions().First().End.Item1;
                 if (this.IsDone && this.fishActivationDatas.Count > 1)
                 {
                     this.fishActivationDatas.Dequeue();
@@ -96,7 +106,7 @@ namespace UnityFishSimulation
 
             public Solution(Problem p)
             {
-                var act = p.Current.Activations.Values.First();
+                var act = p.Current.ToDiscreteFunctions().First();
                 var start = new Tuple<float, float3>(act.Start.Item1, float3.zero);
                 var end = new Tuple<float, float3>(act.End.Item1, float3.zero);
                 trajactory = new DiscreteFunction<float, float3>(start, end, act.SampleNum);
@@ -135,9 +145,10 @@ namespace UnityFishSimulation
         protected IAlgorithm solver;
 
 
-        [SerializeField] protected List<MassPoint> runtimeList;
-        [SerializeField] protected List<Spring> runtimeMuscleList;
-        [SerializeField] protected List<Spring> runtimeSpringList;
+        [SerializeField] public List<MassPoint> runtimeList;
+        [SerializeField] public List<Spring> runtimeMuscleList;
+        [SerializeField] public List<Spring> runtimeSpringList;
+        [SerializeField] public List<FinFace> runtimeFinList;
 
         public FishSimulator(
             SolverType type, 
@@ -167,6 +178,8 @@ namespace UnityFishSimulation
                                                     Spring.Type.MuscleMiddle,
                                                     Spring.Type.MuscleFront }
                                                 );
+
+            this.runtimeFinList = p.FishData.FishPectoralFins;
 
             if (this.solverType == SolverType.Euler)
             {
