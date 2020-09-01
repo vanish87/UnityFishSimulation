@@ -69,7 +69,7 @@ namespace UnityFishSimulation
             }
         }
 
-        public Matrix4x4 WordToLocalMatrix { get => Matrix4x4.TRS(this.GeometryCenter, Quaternion.FromToRotation(new float3(0, 1, 0), this.Normal), new float3(1, 1, 1)); }
+        public Matrix4x4 WordToLocalMatrix { get => Matrix4x4.TRS(this.GeometryCenter, Quaternion.FromToRotation(new float3(1, 0, 0), this.Direction), new float3(1, 1, 1)); }
 
         public float3 Left { get => math.normalize(math.cross(this.Direction, this.Normal)); }
 
@@ -405,8 +405,8 @@ namespace UnityFishSimulation
             var nodes = fish.FishGraph.Nodes.ToList();
             var leftList = new List<MassPoint>();
             var rightList = new List<MassPoint>();
-            var left = new int[] { 1, 4, 5, 8, 9, 12 };
-            var right = new int[] { 2, 3, 6, 7, 10, 11 };
+            var left = new int[] { 1, 4 };//, 5, 8 , 9, 12 };
+            var right = new int[] { 2, 3 };//, 6, 7 }, 10, 11 };
             for (var i = 1; i <= 12; ++i)
             {
                 if(left.Contains(i)) leftList.Add(nodes[i]);
@@ -537,18 +537,14 @@ namespace UnityFishSimulation
             this.nodeList.AddRange(nodes);
 
             this.normal = new float3(0, 1, 0);
-            this.area = 20;
+            this.area = 5;
         }
-        public void ApplyFinForce(float3 velocity, Matrix4x4 worldToLocal)
+        public void ApplyFinForce(float3 velocity, float3 left, float3 forward)
         {
-            return;
-            var localToWorld = worldToLocal.inverse;
-            this.normal = new float3(math.cos(this.Anlge), math.sin(this.Anlge), 0);
-            var normalW = localToWorld.MultiplyVector(this.normal);
+            this.normal = Quaternion.AngleAxis(this.Anlge * Mathf.Rad2Deg, left) * forward;
+            this.normal = math.normalize(this.normal);
 
-            var A = this.area;
-            var vl = math.length(velocity);
-            this.force = -A * vl * vl * math.dot(velocity, normalW) * normalW;
+            this.force = -this.area * math.dot(velocity, this.normal) * this.normal;
 
             var force = this.force / this.nodeList.Count;
             foreach (var node in this.nodeList)
@@ -569,7 +565,8 @@ namespace UnityFishSimulation
                 }
                 center /= this.nodeList.Count;
 
-                Gizmos.DrawLine(center, center + this.force * 20);
+                Gizmos.DrawLine(center, center + this.force);
+                //Gizmos.DrawLine(center, center + this.normal * 20);
             }
         }
     }

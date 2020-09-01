@@ -36,25 +36,10 @@ namespace UnityFishSimulation
     {
         [SerializeField] protected float speed = 1;
         [SerializeField] protected List<AnimationCurve> curves = new List<AnimationCurve>();
-        [SerializeField] protected List<float> offset = new List<float>();
         [SerializeField] protected List<TuningData> tuningData;
 
         public FishSwimmingMC() : base()
         {
-            //FishActivationData.UpdateFFT(this.Current.Activations, 1, false);
-            
-
-            /*foreach (var r in Enumerable.Range(0, 10))
-            {
-                var current = FishActivationData.Load();
-                //FishActivationData.UpdateFFT(current.Activations, 1, false);
-                this.fishActivationDatas.Enqueue(current);
-            }
-            var otherAct = FishActivationData.Load("Swimming2");
-            //FishActivationData.UpdateFFT(otherAct.Activations, 1, false);
-            this.fishActivationDatas.Enqueue(otherAct);*/
-
-            foreach (var act in this.fishActivationDatas) act.GenerateFFTData();
             this.tuningData = this.fishActivationDatas.Select(d => d.Tuning).ToList();
 
             this.curves.Clear();
@@ -69,11 +54,27 @@ namespace UnityFishSimulation
         }
     }
 
-    /*[Serializable]
-    public class FishTurnMC : FishMotorController
+    [Serializable]
+    public class FishTurnMC : FishSimulator.Problem
     {
         //left is negative
         //right is positive
         [SerializeField] protected int angle = 0;
-    }*/
+
+        [SerializeField] protected List<AnimationCurve> curves = new List<AnimationCurve>();
+        [SerializeField] protected List<TuningData> tuningData;
+
+        public FishTurnMC() : base(FishActivationData.Load("TurnRight"))
+        {
+            this.tuningData = this.fishActivationDatas.Select(d => d.Tuning).ToList();
+            this.Current.GenerateFFTData();
+        }
+
+        public override void ReloadData()
+        {
+            this.fish = this.fish ?? GeometryFunctions.Load();
+            this.curves.Clear();
+            this.curves.AddRange(this.Current.ToAnimationCurves());
+        }
+    }
 }

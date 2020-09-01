@@ -28,6 +28,18 @@ namespace UnityFishSimulation
         public FishActivationDataSwimming(float2 interval, int sampleNum = 15) : base(interval, sampleNum) { }
     }
     [Serializable]
+    public class FishActivationDataTrun : FishActivationData
+    {
+        [SerializeField] protected float speed = 1;
+        protected override string FileName => "TurnRight";
+        protected override List<Spring.Type> GetSprtingTypes()
+        {
+            return new List<Spring.Type>() { Spring.Type.MuscleFront, Spring.Type.MuscleMiddle };
+        }
+
+        public FishActivationDataTrun(float2 interval, int sampleNum = 15) : base(interval, sampleNum) { }
+    }
+    [Serializable]
     public class TuningData
     {
         [Serializable]
@@ -40,6 +52,7 @@ namespace UnityFishSimulation
         }
 
         public List<SpringToData> springToDatas = new List<SpringToData>();
+        public bool useFFT = true;
 
         public SpringToData GetDataByType(Spring.Type type)
         {
@@ -243,7 +256,7 @@ namespace UnityFishSimulation
             var ret = 0f;
             if (this.HasType(type))
             {
-                ret = fft ? this.fftData[type].Evaluate(x) : this.activations[type].Evaluate(x);
+                ret = fft ? (this.fftData[type].Evaluate(x) + 0.5f) : this.activations[type].Evaluate(x);
             }
 
             return ret;
@@ -310,12 +323,12 @@ namespace UnityFishSimulation
             var velocity = sol?.velocity;
 
 
-            var goalPos = new float3(100, 0, 0);
+            var goalPos = new float3(0, 0, -100);
             var orgPos = new float3(0, 0, 0);
             var goalVel = 10f;
 
             var Ev = useSol ? math.length(trajactory.End.Item2 - goalPos) / math.length(goalPos - orgPos) : 0;
-            Ev += useSol ? -trajactory.End.Item2.x / goalVel : 0;
+            //Ev += useSol ? -trajactory.End.Item2.x / goalVel : 0;
 
 
             for (int i = 0; i < sampleSize; ++i)
@@ -377,7 +390,7 @@ namespace UnityFishSimulation
                         switch(para.type)
                         {
                             case OptType.Swimming: this.activationData = new FishActivationDataSwimming(para.interval, para.sampleNum);break;
-                            case OptType.Turn: this.activationData = new FishActivationDataSwimming(para.interval, para.sampleNum); break;
+                            case OptType.Turn: this.activationData = new FishActivationDataTrun(para.interval, para.sampleNum); break;
                         }
                         
                         this.Generate(this);
@@ -396,7 +409,7 @@ namespace UnityFishSimulation
 
 
                                 simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
-                                simulator.TryToRun();
+                                simulator.ResetAndRun();
 
                                 //Debug.Log("start");
                                 //start new simulation to get trajactory
@@ -647,7 +660,7 @@ namespace UnityFishSimulation
 
         protected void Start()
         {
-            this.StartSA(new SAProblem(this.timeInterval, this.sampleNum));
+            this.StartSA(new SAProblem(this.timeInterval, this.sampleNum, SAProblem.OptType.Turn));
         }
 
         FishActivationData current;
@@ -660,7 +673,7 @@ namespace UnityFishSimulation
 
                 if (this.simulator != null) this.simulator.Dispose();
                 this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
-                this.simulator.TryToRun();
+                this.simulator.ResetAndRun();
             }
             if (Input.GetKeyDown(KeyCode.U))
             {
@@ -677,7 +690,7 @@ namespace UnityFishSimulation
 
                 if(this.simulator != null)this.simulator.Dispose();
                 this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
-                this.simulator.TryToRun();
+                this.simulator.ResetAndRun();
 
                 this.curves.Clear();
                 this.curves.AddRange(activations.ToAnimationCurves());

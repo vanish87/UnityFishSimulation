@@ -90,7 +90,7 @@ namespace UnityFishSimulation
         {
             foreach (var fin in fish.FishPectoralFins)
             {
-                fin.ApplyFinForce(fish.Velocity, fish.WordToLocalMatrix);
+                fin.ApplyFinForce(fish.Velocity, fish.Left, fish.Direction);
             }
         }
 

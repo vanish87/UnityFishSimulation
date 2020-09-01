@@ -23,6 +23,7 @@ namespace UnityFishSimulation
         [SerializeField] protected float2 timeInterval = new float2(0, 20);
         [SerializeField] protected int sampleNum = 15;
         [SerializeField] protected List<AnimationCurve> curves = new List<AnimationCurve>();
+        [SerializeField] protected TuningData tuning;
 
         [SerializeField] protected List<float3> traj = new List<float3>();
 
@@ -39,15 +40,13 @@ namespace UnityFishSimulation
             }
 
             this.activationData.GenerateFFTData();
+            this.tuning = this.activationData.Tuning;
+            this.tuning.useFFT = false;
         }
 
         protected void UpdateAnimations()
         {
-            this.curves.Clear();
-            foreach(var func in this.activationData.ToDiscreteFunctions())
-            {
-                this.curves.Add(func.ToAnimationCurve());
-            }
+            this.curves = this.activationData.ToAnimationCurves();
         }
 
         protected void UpdateAnimationsFunctions()

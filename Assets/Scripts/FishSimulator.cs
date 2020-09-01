@@ -68,7 +68,8 @@ namespace UnityFishSimulation
                 if (data.HasType(type))
                 {
                     var tuning = data.Tuning.GetDataByType(type);
-                    var value = data.Evaluate(t * tuning.frequency, type) + 0.5f;
+                    var value = data.Evaluate(t * tuning.frequency, type, data.Tuning.useFFT);
+                    //value = data.Evaluate(t * tuning.frequency, type, false);
                     var lvalue = this.ApplyTuning(tuning, value);
                     var rvalue = this.ApplyTuning(tuning, 1 - value);
 
