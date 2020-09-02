@@ -98,7 +98,7 @@ namespace UnityFishSimulation
                 if (math.abs(cosFunc[i].amplitude) <= 0.01f) continue;
                 ret += cosFunc[i].Evaluate(x);
             }
-            return ret;
+            return ret + 0.5f;
 
         }
         public void GenerateFFTData()
@@ -256,7 +256,7 @@ namespace UnityFishSimulation
             var ret = 0f;
             if (this.HasType(type))
             {
-                ret = fft ? (this.fftData[type].Evaluate(x) + 0.5f) : this.activations[type].Evaluate(x);
+                ret = fft ? (this.fftData[type].Evaluate(x)) : this.activations[type].Evaluate(x);
             }
 
             return ret;
