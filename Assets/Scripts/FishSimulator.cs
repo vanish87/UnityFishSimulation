@@ -21,6 +21,74 @@ namespace UnityFishSimulation
         }
 
         [Serializable]
+        public class FishController : IProblem
+        {
+            protected FishBody body;
+            protected FishBrain brain;
+
+            protected SolverType solverType = SolverType.Euler;
+            protected IAlgorithm solver;
+
+            protected FishActivationData Current;
+            protected float ApplyTuning(TuningData.SpringToData data, float value)
+            {
+                value = math.clamp((value - 0.5f) * 2 * data.amplitude, -1, 1);
+                value = (value + 1) * 0.5f;
+                value += data.offset;
+                value = math.saturate(value);
+                return value;
+            }
+            public void ApplyActivations(Delta delta)
+            {
+                //get motor controller from brain
+                var types = new List<Spring.Type>() { Spring.Type.MuscleFront, Spring.Type.MuscleMiddle, Spring.Type.MuscleBack };
+
+                foreach (var type in types)
+                {
+                    var t = delta.current;
+                    var muscle = this.body.modelData.GetSpringByType(new List<Spring.Type>() { type });
+                    var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
+                    var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
+
+                    var data = this.Current;
+                    LogTool.LogAssertIsTrue(data != null, "fishActivationDatas is empty");
+
+                    if (data.HasType(type))
+                    {
+                        var tuning = data.Tuning.GetDataByType(type);
+                        var value = data.Evaluate(t * tuning.frequency, type, data.Tuning.useFFT);
+                        //value = data.Evaluate(t * tuning.frequency, type, false);
+                        var lvalue = this.ApplyTuning(tuning, value);
+                        var rvalue = this.ApplyTuning(tuning, 1 - value);
+
+                        foreach (var l in muscleLeft)
+                        {
+                            //l.Activation = act;
+                            //l.Activation = cos;// 
+                            l.Activation = lvalue;
+                        }
+                        foreach (var r in muscleRight)
+                        {
+                            //r.Activation = 1 - act;
+                            //r.Activation = 1 - cos;// 
+                            r.Activation = rvalue;
+                        }
+                    }
+                }
+            }
+
+            public void UpdateBody(Delta delta)
+            {
+                this.solver.Solve(new FishStructureProblem() { fish = body.modelData, dt = Delta.dt });
+            }
+
+            public void Reset()
+            {
+                //this.body.Reset();
+            }
+        }
+
+        [Serializable]
         public class Problem : IProblem
         {
             public FishModelData FishData { get => this.fish; }
@@ -206,18 +274,32 @@ namespace UnityFishSimulation
 
         public override ISolution Solve(IProblem problem)
         {
-            var p = problem as Problem;
+            var useNew = problem is FishController;
             var d = this.dt as Delta;
             var s = this.CurrentSolution as Solution;
-            p.ApplyActivations(Spring.Type.MuscleFront, dt);
-            p.ApplyActivations(Spring.Type.MuscleMiddle, dt);
-            p.ApplyActivations(Spring.Type.MuscleBack, dt);
+            if (useNew)
+            {
+                var p = problem as FishController;
 
-            //Step fish data once
-            this.solver.Solve(new FishStructureProblem() { fish = p.FishData, dt = Delta.dt });
+                p.ApplyActivations(d);
+                p.UpdateBody(d);
+                //s.Update(p, d);
+            }
+            else
+            {
+                var p = problem as Problem;
 
-            p.Update(s, d);
-            s.Update(p, d);
+                p.ApplyActivations(Spring.Type.MuscleFront, dt);
+                p.ApplyActivations(Spring.Type.MuscleMiddle, dt);
+                p.ApplyActivations(Spring.Type.MuscleBack, dt);
+
+                //Step fish data once
+                this.solver.Solve(new FishStructureProblem() { fish = p.FishData, dt = Delta.dt });
+
+                p.Update(s, d);
+                s.Update(p, d);
+            }
+
             
             return this.CurrentSolution;
         }

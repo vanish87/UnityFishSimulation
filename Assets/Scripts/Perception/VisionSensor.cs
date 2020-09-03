@@ -1,7 +1,9 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityTools.Algorithm;
 using UnityTools.Common;
 using UnityTools.Debuging.EditorTool;
 
@@ -19,6 +21,12 @@ namespace UnityFishSimulation
     {
         public float size;
         public float3 position;
+    }
+
+
+    public class FishBody
+    {
+        public FishModelData modelData;
     }
 
     public class FishBrain
@@ -44,7 +52,7 @@ namespace UnityFishSimulation
 
         protected void UpdateSensor(float t)
         {
-
+            this.perception.visionSensor.Scan();
         }  
     }
     public class VisionSensor

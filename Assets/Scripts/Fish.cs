@@ -7,6 +7,8 @@ namespace UnityFishSimulation
     public class Fish : MonoBehaviour
     {
         protected FishBrain fishBrain;
+        protected FishBody fishBody;
+        protected FishSimulator.FishController fishController;
         protected FishSimulator fishSimulator;
 
         protected void Start()
