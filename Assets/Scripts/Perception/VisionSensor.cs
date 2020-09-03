@@ -27,6 +27,11 @@ namespace UnityFishSimulation
     public class FishBody
     {
         public FishModelData modelData;
+
+        public FishBody()
+        {
+            this.modelData = GeometryFunctions.Load();
+        }
     }
 
     public class FishBrain
@@ -38,6 +43,26 @@ namespace UnityFishSimulation
         public IntensionGenerator intensionGenerator;
         public BehaviorSelector behaviorSelector;
 
+        protected BehaviorRoutine current;
+
+        public FishActivationData temp;
+
+        public FishBrain(FishActivationData fishActivationData) : base()
+        {
+            this.temp = fishActivationData;
+        }
+        public FishBrain()
+        {
+            this.perception = new Perception();
+            this.habits = new Habits();
+            this.mentalState = new MentalState();
+            this.physicalState = new PhysicalState();
+            this.intensionGenerator = new IntensionGenerator();
+            this.behaviorSelector = new BehaviorSelector();
+
+            this.temp = FishActivationData.Load();
+        }
+
         public void Update(float t)
         {
             this.UpdateSensor(t);
@@ -47,7 +72,7 @@ namespace UnityFishSimulation
 
             var behaviorRoutine = this.behaviorSelector.Generate(intension, this.perception);
 
-
+            this.current = behaviorRoutine;
         }
 
         protected void UpdateSensor(float t)
@@ -138,6 +163,14 @@ namespace UnityFishSimulation
         public SensorData sensorData;
 
         public Focusser focusser;
+
+        public Perception()
+        {
+            this.visionSensor = new VisionSensor();
+            this.temperatureSensor = new TemperatureSensor();
+            this.sensorData = new SensorData();
+            this.focusser = new Focusser();
+        }
 
         public Focusser.CollisionInfo GetCollisions() { return this.focusser.target.collisionInfo; } 
     }
@@ -320,6 +353,7 @@ namespace UnityFishSimulation
         public LinkedList<Intension> intensionStack;
         public Intension Generate(Perception perception, Habits habits, MentalState mental, PhysicalState ps, float t)
         {
+            return default;
             Intension intension = default;
             var collisions = perception.GetCollisions();
             var distance = collisions.cloesetObj == null ? -1 : math.distance(collisions.cloesetObj.position, perception.visionSensor.Position);
@@ -423,7 +457,7 @@ namespace UnityFishSimulation
 
     public abstract class BehaviorRoutine
     {
-        public abstract void ToMC();
+        public abstract List<MotorController> ToMC();
         public abstract void Init(Intension intension, Perception perception);
     }
 
@@ -437,8 +471,9 @@ namespace UnityFishSimulation
             //=> MC and MC parameters
         }
 
-        public override void ToMC()
+        public override List<MotorController> ToMC()
         {
+            return default;
         }
     }
 
@@ -452,19 +487,24 @@ namespace UnityFishSimulation
             //=> MC and MC parameters
         }
 
-        public override void ToMC()
+        public override List<MotorController> ToMC()
         {
+            return default;
         }
     }
 
     public class Wandering : BehaviorRoutine
-    {
+    {        
         public override void Init(Intension intension, Perception perception)
         {
+
         }
 
-        public override void ToMC()
+        public override List<MotorController> ToMC()
         {
+            var ret = new List<MotorController>();
+            ret.Add(new SwimMC());
+            return ret;
         }
     }
 
@@ -496,6 +536,8 @@ namespace UnityFishSimulation
                 this.muscleControlParamters.Add(t, new Parameter());
                 this.muscleControlParamters.Add(t, new Parameter());
             }
+
+            this.activationData = FishActivationData.Load(this.FileName);
         }
         protected virtual Parameter GetParameter(Spring.Type type) { return default; }
     }

@@ -1,18 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.Assertions;
-using UnityTools.Common;
-using UnityTools.Debuging;
-using UnityTools.Math;
-using static UnityFishSimulation.FishSAOptimizer.FishSA;
-
 namespace UnityFishSimulation
 {
-    [Serializable]
+    /*[Serializable]
     public class FishSwimmingMC : FishSimulator.Problem
     {
         [SerializeField] protected float speed = 1;
@@ -57,5 +49,5 @@ namespace UnityFishSimulation
             this.curves.Clear();
             this.curves.AddRange(this.Current.ToAnimationCurves());
         }
-    }
+    }*/
 }

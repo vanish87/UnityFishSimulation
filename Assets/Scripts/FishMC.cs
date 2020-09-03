@@ -7,7 +7,26 @@ namespace UnityFishSimulation
 {
     public class FishMC : MonoBehaviour
     {
-        [SerializeField] protected FishSwimmingMC fishMC;
+        public enum Type
+        {
+            Swimming,
+            TurnRight
+        }
+        [SerializeField] Type type = Type.Swimming;
+        Fish fish;
+
+        public List<AnimationCurve> curves;
+        protected void Start()
+        {
+            this.fish = this.GetComponent<Fish>();
+
+            this.fish.Brain.temp = FishActivationData.Load(type.ToString());
+            this.fish.sim.TryToRun();
+
+
+            this.curves = this.fish.Brain.temp.ToAnimationCurves();
+        }
+        /*[SerializeField] protected FishController fishMC;
 
         [SerializeField, Range(0, 3.14f)] protected float Langle = math.PI / 2;
         [SerializeField, Range(0, 3.14f)] protected float Rangle = math.PI / 2;
@@ -15,11 +34,11 @@ namespace UnityFishSimulation
 
         protected void Start()
         {
-            fishMC = new FishSwimmingMC();
-            sim = new FishSimulator(FishSimulator.SolverType.Euler, this.fishMC, new FishSimulator.Delta());
+            fishMC = new FishController();
+            / *sim = new FishSimulator(FishSimulator.SolverType.Euler, this.fishMC, new FishSimulator.Delta());
             sim.End((p, s, d, a) => sim.TryToRun());
 
-            sim.ResetAndRun();
+            sim.ResetAndRun();* /
         }
 
         protected void Update()
@@ -28,18 +47,17 @@ namespace UnityFishSimulation
             {
                 FishActivationData.Save(this.fishMC.Current);
             }
-            if (Input.GetKeyDown(KeyCode.R))
+            / *if (Input.GetKeyDown(KeyCode.R))
             {
                 this.fishMC.ReloadData();
             }
 
             this.sim.runtimeFinList[0].Anlge = Langle;
-            this.sim.runtimeFinList[1].Anlge = Langle;
+            this.sim.runtimeFinList[1].Anlge = Langle;* /
         }
 
         protected void OnDrawGizmos()
         {
-            this.sim?.OnGizmos();
-        }
+        }*/
     }
 }

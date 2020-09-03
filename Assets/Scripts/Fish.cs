@@ -8,17 +8,30 @@ namespace UnityFishSimulation
     {
         protected FishBrain fishBrain;
         protected FishBody fishBody;
-        protected FishSimulator.FishController fishController;
-        protected FishSimulator fishSimulator;
+        [SerializeField] protected FishController fishController;
 
-        protected void Start()
+        internal protected FishSimulator sim;
+        internal protected FishBrain Brain => this.fishBrain;
+        
+        protected void Awake()
         {
-            
+            this.fishBody = new FishBody();
+            this.fishBrain = new FishBrain();
+            this.fishController = new FishController(this.fishBody, this.fishBrain);
+
+            var p = new FishSimulator.ControllerProblem();
+            this.sim = new FishSimulator(p, new FishSimulator.Delta());
+            p.AddController(this.fishController);
         }
 
         protected void Update()
         {
-            this.fishBrain.Update(Time.deltaTime);
+
+        }
+
+        protected void OnDrawGizmos()
+        {
+            this.fishBody?.modelData.OnGizmos(GeometryFunctions.springColorMap);
         }
     }
 }

@@ -27,8 +27,8 @@ namespace UnityFishSimulation
 
         [SerializeField] protected List<float3> traj = new List<float3>();
 
-        [SerializeField] protected FishSimulator simulator;
         protected FishActivationData activationData;
+        protected Fish fish;
         
         protected void InitActivations()
         {
@@ -55,35 +55,27 @@ namespace UnityFishSimulation
             this.activationData[Spring.Type.MuscleBack] = new X2FDiscreteFunction<float>(this.curves[1]);
         }
 
-        protected void UpdateTraj()
+        /*protected void UpdateTraj()
         {
             this.traj.Clear();
             var sol = this.simulator.CurrentSolution as FishSimulator.Solution;
             this.traj.AddRange(sol.trajactory.ToYVector());
-        }
+        }*/
 
         protected void Start()
         {
+            this.fish = this.GetComponent<Fish>();
+
             this.InitActivations();
             this.UpdateAnimations();
 
-            var problem = new FishSimulator.Problem(this.activationData);
-            var delta = new FishSimulator.Delta();
+            this.fish.Brain.temp = this.activationData;
 
-            this.simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta, this.stepMode);
-            this.simulator.ResetAndRun();
+            this.fish.sim.TryToRun();
         }
 
         protected void Update()
         {
-            if (this.simulator.IsSimulationDone())
-            {
-                this.UpdateTraj();
-
-                this.UpdateAnimationsFunctions();
-                this.simulator.ResetAndRun();
-            }
-
             if (this.mode == ControlMode.Manual)
             {
                 foreach (var a in this.activationData.ToDiscreteFunctions())
@@ -95,29 +87,32 @@ namespace UnityFishSimulation
                 }
             }
 
-            this.simulator.RunMode = this.stepMode;
+            fish.sim.RunMode = this.stepMode;
 
             if (Input.GetKey(KeyCode.S))
             {
-                this.simulator.TryToRun();
+                fish.sim.TryToRun();
             }
-            if (Input.GetKey(KeyCode.R))
+            if(Input.GetKeyDown(KeyCode.R))
             {
-                this.simulator.ResetAndRun();
+                this.UpdateAnimationsFunctions();
+                fish.sim.ResetAndRun();
             }
-        }
 
-        protected void OnDisable()
-        {
-            this.simulator.StopThread();
+            if(Input.GetKeyDown(KeyCode.G))
+            {
+                foreach (var fun in this.activationData.ToDiscreteFunctions())
+                {
+                    fun.RandomValues();
+                }
+                this.UpdateAnimations();
+            }
         }
 
         protected void OnDrawGizmos()
         {
             using (new GizmosScope(Color.white, this.transform.localToWorldMatrix))
             {
-                this.simulator?.OnGizmos();
-                
                 for (var i = 0; i < this.traj.Count - 1; ++i)
                 {
                     Gizmos.DrawLine(this.traj[i], this.traj[i + 1]);

@@ -7,18 +7,18 @@ namespace UnityFishSimulation
 {
     public class FishTurn : MonoBehaviour
     {
-        [SerializeField] protected FishTurnMC fishMC;
+        /*[SerializeField] protected FishController fishMC;
 
         [SerializeField, Range(0, 3.14f)] protected float angle = math.PI / 2;
         [SerializeField] protected FishSimulator sim;
 
         protected void Start()
         {
-            fishMC = new FishTurnMC();
-            sim = new FishSimulator(FishSimulator.SolverType.Euler, this.fishMC, new FishSimulator.Delta());
+            fishMC = new FishController();
+            / *sim = new FishSimulator(FishSimulator.SolverType.Euler, this.fishMC, new FishSimulator.Delta());
             sim.End((p, s, d, a) => sim.TryToRun());
 
-            sim.ResetAndRun();
+            sim.ResetAndRun();* /
         }
 
         protected void Update()
@@ -27,16 +27,16 @@ namespace UnityFishSimulation
             {
                 FishActivationData.Save(this.fishMC.Current);
             }
-            if (Input.GetKeyDown(KeyCode.R))
+            / *if (Input.GetKeyDown(KeyCode.R))
             {
                 sim.ResetAndRun();
-            }
+            }* /
             
         }
 
         protected void OnDrawGizmos()
         {
-            this.sim?.OnGizmos();
-        }
+            
+        }*/
     }
 }
