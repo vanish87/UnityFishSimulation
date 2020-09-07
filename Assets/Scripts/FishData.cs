@@ -74,6 +74,10 @@ namespace UnityFishSimulation
         public float3 Left { get => math.normalize(math.cross(this.Direction, this.Normal)); }
 
         public float3 Direction { get => math.normalize(this.Head.Position - this.GeometryCenter); }
+        //0, 
+        //1,2,3,4
+        //17,18,19,20
+        //21,22
 
         public MassPoint Head { get => this.FishGraph.Nodes.First(); }
 

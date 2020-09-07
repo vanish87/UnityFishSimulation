@@ -13,18 +13,10 @@ namespace UnityFishSimulation
             TurnRight
         }
         [SerializeField] Type type = Type.Swimming;
-        Fish fish;
 
         public List<AnimationCurve> curves;
         protected void Start()
         {
-            this.fish = this.GetComponent<Fish>();
-
-            this.fish.Brain.temp = FishActivationData.Load(type.ToString());
-            this.fish.sim.TryToRun();
-
-
-            this.curves = this.fish.Brain.temp.ToAnimationCurves();
         }
         /*[SerializeField] protected FishController fishMC;
 

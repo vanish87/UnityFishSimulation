@@ -28,7 +28,7 @@ namespace UnityFishSimulation
         [SerializeField] protected List<float3> traj = new List<float3>();
 
         protected FishActivationData activationData;
-        protected Fish fish;
+        //protected Fish fish;
         
         protected void InitActivations()
         {
@@ -64,14 +64,10 @@ namespace UnityFishSimulation
 
         protected void Start()
         {
-            this.fish = this.GetComponent<Fish>();
+            //this.fish = this.GetComponent<Fish>();
 
             this.InitActivations();
             this.UpdateAnimations();
-
-            this.fish.Brain.temp = this.activationData;
-
-            this.fish.sim.TryToRun();
         }
 
         protected void Update()
@@ -87,7 +83,7 @@ namespace UnityFishSimulation
                 }
             }
 
-            fish.sim.RunMode = this.stepMode;
+            /*
 
             if (Input.GetKey(KeyCode.S))
             {
@@ -97,7 +93,7 @@ namespace UnityFishSimulation
             {
                 this.UpdateAnimationsFunctions();
                 fish.sim.ResetAndRun();
-            }
+            }*/
 
             if(Input.GetKeyDown(KeyCode.G))
             {
