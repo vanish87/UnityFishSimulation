@@ -30,7 +30,7 @@ namespace UnityFishSimulation
 
     public class ChasingTarget : BehaviorRoutine
     {
-        protected float3 target;
+        protected ISensorableObject target;
         public override void Init(Intension intension, Perception perception)
         {
 

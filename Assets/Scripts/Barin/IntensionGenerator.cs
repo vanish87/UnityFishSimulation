@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityTools.Common;
@@ -82,17 +83,18 @@ namespace UnityFishSimulation
         {
             Intension intension = default;
             var sensorData = perception.GetSensorData();
-            var distance = sensorData.closestDistance;
+            var distance = sensorData.closestDangerObj==null?-1:sensorData.closestDangerObj.distance;
             if (distance > 0)
             {
-                var mono = sensorData.closestObject as MonoBehaviour;
+                var mono = sensorData.closestDangerObj.obj as MonoBehaviour;
                 intension = new AvoidIntension(mono.gameObject);
             }
             else
             {
-                //most dangerous predator m
-                var Fm = distance;// collisions.cloesetObj;
-                var F = 0;// mental.F(t, ps, perception.focusser.target);
+                //fear of most dangerous predator m
+                var p = sensorData.GetClosestByType(ObjectType.Predator);
+                var Fm = ps.Fi(p.distance);
+                var F = mental.fear;
                 if (F > this.f0)
                 {
                     if (Fm < this.f1 && habits.schooling)
@@ -101,7 +103,7 @@ namespace UnityFishSimulation
                     }
                     else
                     {
-                        var mono = sensorData.closestObject as MonoBehaviour;
+                        var mono = p.obj as MonoBehaviour;
                         intension = new EscapedIntension(mono.gameObject);
                     }
                 }
@@ -143,8 +145,8 @@ namespace UnityFishSimulation
         protected Intension GenerateNewIntension(Perception perception, Habits habits, MentalState mental, PhysicalState ps, float t)
         {
             Intension intension = default;
-            var H = 0;// mental.H(t, ps, perception.focusser.target);
-            var L = 0;// mental.L(t, ps, perception.focusser.target);
+            var H = mental.hunger;
+            var L = mental.libido;
 
             if (this.r < math.max(H, L))
             {

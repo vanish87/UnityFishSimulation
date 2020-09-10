@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityTools;
 
 namespace UnityFishSimulation
 {
@@ -15,13 +16,13 @@ namespace UnityFishSimulation
         public class Parameter
         {
             public readonly float2 aMinMax = new float2(0, 1);
-            public readonly float2 fMinMax = new float2(0, 1);
+            public readonly float2 fMinMax = new float2(0, 0.075f);
             public float amplitude;
             public float frequency = 1;
         }
         protected FishActivationData activationData;
         protected Dictionary<Spring.Type, Parameter> muscleControlParamters;
-        protected abstract List<Spring.Type> GetSprtingTypes();
+        protected abstract List<Spring.Type> GetSpringTypes();
         protected abstract string FileName { get; }
 
         public FishActivationData ActivationData => this.activationData;
@@ -30,7 +31,7 @@ namespace UnityFishSimulation
         public MuscleMC()
         {
             this.muscleControlParamters = new Dictionary<Spring.Type, Parameter>();
-            var types = this.GetSprtingTypes();
+            var types = this.GetSpringTypes();
             foreach (var t in types)
             {
                 this.muscleControlParamters.Add(t, new Parameter());
@@ -44,24 +45,32 @@ namespace UnityFishSimulation
     {
         protected float speed = 1;
         protected override string FileName => "Swimming";
-        protected override List<Spring.Type> GetSprtingTypes()
+        protected override List<Spring.Type> GetSpringTypes()
         {
             return new List<Spring.Type>() { Spring.Type.MuscleMiddle, Spring.Type.MuscleBack };
         }
         public override Parameter GetParameter(Spring.Type type)
         {
+
+            if(this.muscleControlParamters.ContainsKey(type))
+            {
+                var parameter = this.muscleControlParamters[type].DeepCopy();
+                parameter.amplitude *= this.speed;
+                parameter.frequency *= this.speed;
+                return parameter;
+            }
             //convert from speed to parameter
-            return this.muscleControlParamters.ContainsKey(type)?this.muscleControlParamters[type]: new Parameter();
+            return new Parameter();
         }
 
     }
 
     public class TurnMC : MuscleMC
     {
-        protected Dictionary<int, Parameter> turnAnlgeMap;
+        protected Dictionary<int, Parameter> turnAngleMap;
         protected float angle = 0;
         protected override string FileName => "Turn";
-        protected override List<Spring.Type> GetSprtingTypes()
+        protected override List<Spring.Type> GetSpringTypes()
         {
             return new List<Spring.Type>() { Spring.Type.MuscleFront, Spring.Type.MuscleMiddle };
         }
@@ -73,7 +82,7 @@ namespace UnityFishSimulation
         }
         public TurnMC() : base()
         {
-            this.turnAnlgeMap = new Dictionary<int, Parameter>();
+            this.turnAngleMap = new Dictionary<int, Parameter>();
         }
     }
 
@@ -81,7 +90,7 @@ namespace UnityFishSimulation
     {
         protected float time = 0;
         protected override string FileName => "Glide";
-        protected override List<Spring.Type> GetSprtingTypes()
+        protected override List<Spring.Type> GetSpringTypes()
         {
             return new List<Spring.Type>() { Spring.Type.MuscleFront, Spring.Type.MuscleMiddle, Spring.Type.MuscleBack };
         }

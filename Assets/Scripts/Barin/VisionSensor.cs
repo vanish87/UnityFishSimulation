@@ -11,15 +11,6 @@ using UnityTools.Debuging.EditorTool;
 
 namespace UnityFishSimulation
 {
-    public static class Matrix4x4e
-    {
-        public static readonly Matrix4x4 identity = Matrix4x4.identity;
-    }
-    public static class float3e
-    {
-        public static readonly float3 one = new float3(1, 1, 1);
-    }
-    
     public class VisionSensor : MonoBehaviour, ISensorableObject, FishManager.IManagerUser
     {
         [SerializeField] protected bool debug = false;
@@ -34,7 +25,7 @@ namespace UnityFishSimulation
 
         public FishManager Manager { get; set; }
 
-        public Type ObjType => Type.Predator;
+        public ObjectType ObjType => ObjectType.Predator;
 
         public float GetDistance(ISensorableObject other)
         {
@@ -43,16 +34,19 @@ namespace UnityFishSimulation
 
         public void Scan(SensorData sensorData)
         {
-            sensorData.currentSensorableObjects.Clear();
-            sensorData.currentVisiableObjects.Clear();
-            sensorData.currentDangerObjects.Clear();
-            sensorData.closestObject = null;
-            sensorData.closestDistance = -1;
+            sensorData.Clear();
 
             var from = this as ISensorableObject;
             var o = new float3(this.Position);
             var dir = new float3(this.transform.forward);
-            var minDis = this.Vr;
+            var minDis = new Dictionary<ObjectType, float>();
+            foreach(ObjectType t in Enum.GetValues(typeof(ObjectType)))
+            {
+                minDis.Add(t, this.Or);
+            } 
+
+            var minDangerDis = this.Dr;
+            
             LogTool.AssertIsTrue(this.Manager != null);
             foreach (var f in this.Manager.SensorableObjects)
             {
@@ -60,25 +54,30 @@ namespace UnityFishSimulation
                 var distance = from.GetDistance(f);
                 if (distance < this.Or)
                 {
-                    sensorData.currentSensorableObjects.Add(f);
+                    sensorData.AddSensorable(f, distance);
 
                     var p = f.Position;
-                    var dis = math.length(p - o);
                     var angle = math.dot(math.normalize(p - o), math.normalize(dir));
-                    if (dis < this.Vr && angle > math.cos(math.radians(this.angle / 2)))
+                    if (distance < this.Vr && angle > math.cos(math.radians(this.angle / 2)))
                     {
-                        sensorData.currentVisiableObjects.Add(f);
+                        sensorData.AddVisiable(f, distance);
 
                         if(distance < this.Dr)
                         {
-                            sensorData.currentDangerObjects.Add(f);
-                            if(distance < minDis)
+                            sensorData.AddDanger(f, distance);
+
+                            if(distance < minDangerDis)
                             {
-                                minDis = distance;
-                                sensorData.closestObject = f;
+                                minDangerDis = distance;
+                                sensorData.closestDangerObj = new SensorObject(){obj=f, distance= distance};
                             }
                         }
                     }
+                }
+                if (distance < minDis[f.ObjType])
+                {
+                    minDis[f.ObjType] = distance;
+                    sensorData.SetClosest(f, distance);
                 }
             }
         }

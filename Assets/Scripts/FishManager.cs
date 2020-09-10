@@ -7,17 +7,19 @@ using UnityTools.Common;
 
 namespace UnityFishSimulation
 {
-    public enum Type
+    public enum ObjectType
     {
         Predator,
         Prey,
         Obstacle,
+        Food,
+        Mate,
     }
     public interface ISensorableObject
     {
         float3 Position { get; }
         float Size { get; }
-        Type ObjType { get; }
+        ObjectType ObjType { get; }
         float GetDistance(ISensorableObject other);
     }
     public interface IDebug

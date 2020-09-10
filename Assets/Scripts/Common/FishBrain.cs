@@ -28,10 +28,11 @@ namespace UnityFishSimulation
         public void UpdateBrain(float t)
         {
             this.perception.SensorUpdate(t);
+            this.physicalState.UpdateTime(t);
             this.mentalState.Update(t, this.physicalState, this.perception.GetSensorData());
             var intension = this.intensionGenerator.Generate(this.perception, this.habits, this.mentalState, this.physicalState, t);
 
-            this.perception.focusser.Update(intension, this.perception, this.mentalState);
+            this.perception.UpdateFocusser(intension, this.mentalState);
 
             var behaviorRoutine = this.GenerateBehaviorRoutine(intension, this.perception);
             this.UpdateBehaviorRoutine(behaviorRoutine);
@@ -74,21 +75,21 @@ namespace UnityFishSimulation
     [System.Serializable]
     public class Habits
     {
-        public enum LightPerference
+        public enum LightPreference
         {
             Brightness,
             Neutral,
             Darkness,
         }
-        public enum TempratruePerference
+        public enum TempratruePreference
         {
             Cold,
             Neutral,
             Warmth,
         }
 
-        public LightPerference light = LightPerference.Neutral;
-        public TempratruePerference temperature = TempratruePerference.Neutral;
+        public LightPreference light = LightPreference.Neutral;
+        public TempratruePreference temperature = TempratruePreference.Neutral;
         public bool isMale = true;
         public bool schooling = true;
     }
@@ -101,16 +102,11 @@ namespace UnityFishSimulation
         public float libido = 1;
         public float fear = 1;
 
-        //desires 
-        public float ta = 1;
-        public float tf;
-        public float te;
-        public float tm;
-
-        protected float S(ISensorableObject target, float q1, float q2)
+        protected float S(SensorObject target, float q1, float q2)
         {
-            var current = new float3(0, 0, 0);
-            var s = 1 / math.length(current - target.Position);
+            if(target == null) return 0;
+
+            var s = 1 / target.distance;
 
             if (s < q1)
             {
@@ -129,12 +125,16 @@ namespace UnityFishSimulation
 
         public void Update(float t, PhysicalState physical, SensorData sensor)
         {
-            //this.H(t, ps, )        
+            var closestFood = sensor.GetClosestByType(ObjectType.Food);
+            var closestMate = sensor.GetClosestByType(ObjectType.Mate);
+            this.H(t, physical, closestFood);
+            this.L(t, physical, closestMate);
+            this.F(t, physical, sensor.GetVisiable(ObjectType.Predator));
         }
-        private float Sh(ISensorableObject target) { return this.S(target, 0.05f, 0.2f); }
-        private float Sl(ISensorableObject target) { return this.S(target, 0.025f, 0.1f); }
+        private float Sh(SensorObject target) { return this.S(target, 0.05f, 0.2f); }
+        private float Sl(SensorObject target) { return this.S(target, 0.025f, 0.1f); }
 
-        private float H(float t, PhysicalState ps, ISensorableObject target)
+        private float H(float t, PhysicalState ps, SensorObject target)
         {
             var internalUrge = 1 - ps.foodEaten * ps.Rx(ps.timeSinceLastMeal) / ps.appetite;
             var externalStimuli = ps.alphah * this.Sh(target);
@@ -142,35 +142,35 @@ namespace UnityFishSimulation
 
             var H = math.min(internalUrge + externalStimuli, 1);
 
-            this.te = H / this.hunger;
             this.hunger = H;
 
             return this.hunger;
         }
 
-        private float L(float t, PhysicalState ps, ISensorableObject target)
+        private float L(float t, PhysicalState ps, SensorObject target)
         {
-            var Ht = H(t, ps, target);
+            var Ht = this.hunger;
             var internalUrge = ps.Lx(ps.timeSinceLastMating) * (1 - Ht);
             var externalStimuli = this.Sl(target);
 
             var L = math.min(internalUrge + externalStimuli, 1);
 
-            this.tm = L / this.libido;
             this.libido = L;
 
             return this.libido;
         }
 
-        private float F(float t, PhysicalState ps, ISensorableObject target)
+        private float F(float t, PhysicalState ps, List<SensorObject> targets)
         {
-            var ret = 0;
+            var externalStimuli = 0f;
             var internalUrge = 0;
-            //var externalStimuli =
+            foreach(var p in targets)
+            {
+                externalStimuli += ps.Fi(p.distance); 
+            }
 
-            var F = math.min(1, ret);
+            var F = math.min(internalUrge + externalStimuli, 1);
 
-            this.tf = F / this.fear;
             this.fear = F;
 
             return this.fear;
