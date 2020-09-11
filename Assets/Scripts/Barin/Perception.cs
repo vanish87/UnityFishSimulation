@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -87,7 +88,7 @@ namespace UnityFishSimulation
 
         private SensorData sensorData = new SensorData();
 
-        protected Focusser focusser = new Focusser();
+        [SerializeField] protected Focusser focusser = new Focusser();
 
         public void Init()
         {
@@ -103,26 +104,25 @@ namespace UnityFishSimulation
         {
             this.focusser.Update(intension, this, mental);
         }
+        public Focusser GetFocuser(){return this.focusser;}
 
         public SensorData GetSensorData() { return this.sensorData; }
-        public Focusser.CollisionInfo GetCollisions() { return this.focusser.target.collisionInfo; }
-    }
-    [System.Serializable]
 
+
+        protected void OnDrawGizmos()
+        {
+            this.focusser.OnDrawGizmos();
+        }
+    }
+
+    [System.Serializable]
     public class Focusser
     {
-        [System.Serializable]
-        public class CollisionInfo
-        {
-            public GameObject closesObj;
-            public List<GameObject> collisions = new List<GameObject>();
-        }
+        
         [System.Serializable]
         public class Target
         {
-            public float3 position;
-
-            public CollisionInfo collisionInfo;
+            public ISensorableObject obj;
         }
         [System.Serializable]
         //Intension->MotorPreference->Focus
@@ -137,30 +137,91 @@ namespace UnityFishSimulation
                 Ascend,
                 Descend,
             }
-            public float value;
+            [Serializable]
+            public class Data
+            {
+                public Type type;
+                public float value;
+            }
+            [SerializeField] protected List<Data> motorPreferenceData = new List<Data>();
+
+            public Data MaxValue=>this.motorPreferenceData.OrderByDescending(m=>m.value).FirstOrDefault();
+            public Data this[Type t]
+            {
+                get => this.motorPreferenceData.Where(m=>m.type == t).FirstOrDefault();
+            }
+            public MotorPreference()
+            {
+                foreach(Type t in Enum.GetValues(typeof(Type)))
+                {
+                    this.motorPreferenceData.Add(new Data(){type = t, value = 0});
+                }
+            }
+            public void Clear()
+            {
+                foreach(var v in this.motorPreferenceData)
+                {
+                    v.value = 0;
+                }
+            }
         }
 
-        public Dictionary<MotorPreference, float> motorPreferenceData = new Dictionary<MotorPreference, float>();
-        public Target target;
+        [SerializeField] public MotorPreference motorPreference = new MotorPreference();
+        public Target target = new Target();
         //active focus and filter out none-important sensor data
         //save to Target
-        public Target Update(Intension intension, Perception perception, MentalState mental)
+        public void Update(Intension intension, Perception perception, MentalState mental)
         {
-            //calculated desires
+            //get desires
             //avoid, fear, eat, mate
 
+            this.motorPreference.Clear();
+            var foods = perception.GetSensorData().GetVisiable(ObjectType.Food);
+            foreach (var f in foods)
+            {
+                var mtype = this.GetMotorPreferenceType(f.obj, perception);
+                this.motorPreference[mtype].value += mental.eatDesire;
+            }
 
+            var obstacles = perception.GetSensorData().GetVisiable(ObjectType.Obstacle);
+            foreach(var o in obstacles)
+            {
+                var mtype = this.GetMotorPreferenceType(o.obj, perception);
+                this.motorPreference[mtype].value -= mental.avoidDesire;
+            }
+            //TODO add predator value
+
+            var targetType = intension.IntensionType == Intension.Type.Eat ? ObjectType.Food : ObjectType.Obstacle;
+
+            var sameSide = foods.Where(o=>this.GetMotorPreferenceType(o.obj, perception) == this.motorPreference.MaxValue.type);
+            this.target.obj = sameSide.OrderBy(o=>o.distance).First().obj;
             //if intension == avoid
 
             //if intension == escape
 
-            return default;
         }
 
-        protected MotorPreference IntensionToMotorPreference(Intension intension)
+        //TODO return multiple motorpreference
+        protected MotorPreference.Type GetMotorPreferenceType(ISensorableObject obj, Perception perception)
         {
+            var org = perception.transform.position;
+            var dir = perception.transform.forward; // Note forward is blue axis
 
-            return default;
+            var target = math.normalize(obj.Position - new float3(org));
+            var angle = math.dot(target, dir);
+            //>0 left
+            //<0 right
+            var forwardAngle = new float2(math.cos(math.radians(90-25)), math.cos(math.radians(90+25)));
+            if(forwardAngle.x > angle && angle > forwardAngle.y) return MotorPreference.Type.MoveForward;
+            return angle > 0? MotorPreference.Type.TurnLeft:MotorPreference.Type.TurnRight;
+        }
+
+        public void OnDrawGizmos()
+        {
+            if(this.target.obj != null)
+            {
+                Gizmos.DrawSphere(target.obj.Position, 2);
+            }
         }
     }
 }

@@ -13,6 +13,7 @@ namespace UnityFishSimulation
 
     public abstract class MuscleMC : MotorController
     {
+        [System.Serializable]
         public class Parameter
         {
             public readonly float2 aMinMax = new float2(0, 1);
@@ -77,8 +78,15 @@ namespace UnityFishSimulation
 
         public override Parameter GetParameter(Spring.Type type)
         {
+            if (this.muscleControlParamters.ContainsKey(type))
+            {
+                var parameter = this.muscleControlParamters[type].DeepCopy();
+                //parameter.amplitude *= this.speed;
+                //parameter.frequency *= this.speed;
+                return parameter;
+            }
             //convert from speed to parameter
-            return default;
+            return new Parameter();
         }
         public TurnMC() : base()
         {

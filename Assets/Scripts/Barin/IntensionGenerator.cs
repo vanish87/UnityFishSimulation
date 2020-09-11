@@ -83,17 +83,22 @@ namespace UnityFishSimulation
         {
             Intension intension = default;
             var sensorData = perception.GetSensorData();
-            var distance = sensorData.closestDangerObj==null?-1:sensorData.closestDangerObj.distance;
+            var distance = sensorData.closestDangerObj == null ? -1 : sensorData.closestDangerObj.distance;
             if (distance > 0)
             {
                 var mono = sensorData.closestDangerObj.obj as MonoBehaviour;
                 intension = new AvoidIntension(mono.gameObject);
+
+                if (this.intensionStack.Count == 0 || this.intensionStack.Last.Value.IntensionType != Intension.Type.Avoid)
+                {
+                    this.intensionStack.AddLast(intension);
+                }
             }
             else
             {
                 //fear of most dangerous predator m
                 var p = sensorData.GetClosestByType(ObjectType.Predator);
-                var Fm = ps.Fi(p.distance);
+                var Fm = p != null ? ps.Fi(p.distance) : 0;
                 var F = mental.fear;
                 if (F > this.f0)
                 {
@@ -119,11 +124,6 @@ namespace UnityFishSimulation
                         intension = this.GenerateNewIntension(perception, habits, mental, ps, t);
                     }
                 }
-            }
-
-            if (this.intensionStack.Count == 0 || this.intensionStack.Last.Value.IntensionType != Intension.Type.Avoid)
-            {
-                this.intensionStack.AddLast(intension);
             }
 
             if (this.intensionStack.Count > 1) this.intensionStack.RemoveFirst();

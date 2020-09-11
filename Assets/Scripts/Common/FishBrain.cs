@@ -8,15 +8,19 @@ namespace UnityFishSimulation
 {
     public class FishBrain : MonoBehaviour
     {
-        public Habits habits = new Habits();
-        public MentalState mentalState = new MentalState();
-        public PhysicalState physicalState = new PhysicalState();
+        [SerializeField] protected Habits habits = new Habits();
+        [SerializeField] protected MentalState mentalState = new MentalState();
+        [SerializeField] protected PhysicalState physicalState = new PhysicalState();
 
-        public Perception perception;
-        public IntensionGenerator intensionGenerator;
+        protected Perception perception;
+        protected IntensionGenerator intensionGenerator;
 
         protected LinkedList<BehaviorRoutine> behaviorRoutines = new LinkedList<BehaviorRoutine>();
 
+
+        [SerializeField] protected Intension.Type currentIntension;
+
+        [SerializeField] protected BehaviorRoutine currentBehavior;
         public void Init()
         {
             this.perception = this.GetComponentInChildren<Perception>();
@@ -29,13 +33,17 @@ namespace UnityFishSimulation
         {
             this.perception.SensorUpdate(t);
             this.physicalState.UpdateTime(t);
-            this.mentalState.Update(t, this.physicalState, this.perception.GetSensorData());
+            this.mentalState.UpdateState(t, this.physicalState, this.perception.GetSensorData());
             var intension = this.intensionGenerator.Generate(this.perception, this.habits, this.mentalState, this.physicalState, t);
 
+            this.mentalState.UpdateDesire(t, this.physicalState, this.perception.GetSensorData(), intension);
             this.perception.UpdateFocusser(intension, this.mentalState);
 
             var behaviorRoutine = this.GenerateBehaviorRoutine(intension, this.perception);
             this.UpdateBehaviorRoutine(behaviorRoutine);
+
+
+            this.currentIntension = intension.IntensionType;
         }
 
         public BehaviorRoutine GetBehaviorRoutine()
@@ -45,18 +53,17 @@ namespace UnityFishSimulation
 
         protected BehaviorRoutine GenerateBehaviorRoutine(Intension intension, Perception perception)
         {
-            var ret = new List<MotorController>();
             //MC logical
-            var behavior = new ChasingTarget();
-            behavior.Init(intension, perception);
+            this.currentBehavior = this.currentBehavior??new BehaviorRoutine();
+            this.currentBehavior.Init(intension, perception);
 
-            return behavior;
+            return this.currentBehavior;
         }
 
         protected void UpdateBehaviorRoutine(BehaviorRoutine routine)
         {
 
-            if (this.behaviorRoutines.Count > 0 && this.behaviorRoutines.Last.Value is ChasingTarget)
+            if (this.behaviorRoutines.Count > 0)
             {
                 //Update last one 
             }
@@ -102,6 +109,11 @@ namespace UnityFishSimulation
         public float libido = 1;
         public float fear = 1;
 
+        public float avoidDesire = 0;
+        public float fearDesire = 0;
+        public float eatDesire = 0;
+        public float mateDesire = 0;
+
         protected float S(SensorObject target, float q1, float q2)
         {
             if(target == null) return 0;
@@ -123,13 +135,28 @@ namespace UnityFishSimulation
             }
         }
 
-        public void Update(float t, PhysicalState physical, SensorData sensor)
+        public void UpdateState(float t, PhysicalState physical, SensorData sensor)
         {
             var closestFood = sensor.GetClosestByType(ObjectType.Food);
             var closestMate = sensor.GetClosestByType(ObjectType.Mate);
             this.H(t, physical, closestFood);
             this.L(t, physical, closestMate);
             this.F(t, physical, sensor.GetVisiable(ObjectType.Predator));
+        }
+        public void UpdateDesire(float t, PhysicalState physical, SensorData sensor, Intension intension)
+        {
+            var ti = 1f;
+            switch(intension.IntensionType)
+            {
+                case Intension.Type.Escape: ti = this.fear; break;
+                case Intension.Type.Eat: ti = this.hunger; break;
+                case Intension.Type.Mate: ti = this.libido; break;
+                default: ti = 1; break;
+            } 
+            this.avoidDesire = 1;
+            this.fearDesire = this.fear / ti;
+            this.eatDesire = this.hunger / ti;
+            this.mateDesire = this.libido / ti;
         }
         private float Sh(SensorObject target) { return this.S(target, 0.05f, 0.2f); }
         private float Sl(SensorObject target) { return this.S(target, 0.025f, 0.1f); }
@@ -206,6 +233,7 @@ namespace UnityFishSimulation
         public void Eat(int foodNum)
         {
             this.foodEaten += foodNum;
+            this.timeSinceLastMeal = 0;
         }
     }
 }

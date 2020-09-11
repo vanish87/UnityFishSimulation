@@ -20,7 +20,7 @@ namespace UnityFishSimulation
     {
         [SerializeField] protected float speed = 1;
         protected override string FileName => "Swimming";
-        protected override List<Spring.Type> GetSprtingTypes()
+        protected override List<Spring.Type> GetSpringTypes()
         {
             return new List<Spring.Type>() { Spring.Type.MuscleMiddle, Spring.Type.MuscleBack };
         }
@@ -32,7 +32,7 @@ namespace UnityFishSimulation
     {
         [SerializeField] protected float speed = 1;
         protected override string FileName => "TurnRight";
-        protected override List<Spring.Type> GetSprtingTypes()
+        protected override List<Spring.Type> GetSpringTypes()
         {
             return new List<Spring.Type>() { Spring.Type.MuscleFront, Spring.Type.MuscleMiddle };
         }
@@ -142,7 +142,7 @@ namespace UnityFishSimulation
         {
             var activations = new Dictionary<Spring.Type, X2FDiscreteFunction<float>>();
 
-            var types = this.GetSprtingTypes();
+            var types = this.GetSpringTypes();
             var count = 0;
             foreach(var t in types)
             {
@@ -200,16 +200,20 @@ namespace UnityFishSimulation
             LogTool.Log("Saved " + path);
         }
 
+        static Dictionary<string, FishActivationData> data = new Dictionary<string, FishActivationData>();
         public static FishActivationData Load(string fileName = "Swimming")
         {
             fileName += ".ad";
+            if(data.ContainsKey(fileName)) return data[fileName];
             var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
             var ret = FileTool.Read<FishActivationData>(path);
             LogTool.Log("Loaded " + path);
+            data.Add(fileName, ret);
             return ret;
         }
-        public int SampleNum { get => this.sampleNum; }
-        public int FunctionCount { get => this.activations.Count; }
+        public float2 Interval => this.interval;
+        public int SampleNum  => this.sampleNum;
+        public int FunctionCount  => this.activations.Count; 
 
         protected float2 interval;
         protected int sampleNum;
@@ -218,7 +222,7 @@ namespace UnityFishSimulation
         protected Dictionary<Spring.Type, FFTData> fftData = new Dictionary<Spring.Type, FFTData>();
         protected TuningData tuningData = new TuningData();
 
-        protected abstract List<Spring.Type> GetSprtingTypes();
+        protected abstract List<Spring.Type> GetSpringTypes();
         protected abstract string FileName { get; }
 
 
@@ -239,7 +243,7 @@ namespace UnityFishSimulation
             this.activations.Clear();
             this.tuningData.springToDatas.Clear();
 
-            var types = this.GetSprtingTypes();
+            var types = this.GetSpringTypes();
             var start = new Tuple<float, float>(interval.x, 0);
             var end = new Tuple<float, float>(interval.y, 0);
             foreach (var t in types)
@@ -319,15 +323,15 @@ namespace UnityFishSimulation
 
             var useSol = sol != null;
 
-            var trajactory = sol?.trajactory;
-            var velocity = sol?.velocity;
+            //var trajactory = sol?.trajactory;
+            //var velocity = sol?.velocity;
 
 
             var goalPos = new float3(0, 0, -100);
             var orgPos = new float3(0, 0, 0);
             var goalVel = 10f;
 
-            var Ev = useSol ? math.length(trajactory.End.Item2 - goalPos) / math.length(goalPos - orgPos) : 0;
+            var Ev = 0;// useSol ? math.length(trajactory.End.Item2 - goalPos) / math.length(goalPos - orgPos) : 0;
             //Ev += useSol ? -trajactory.End.Item2.x / goalVel : 0;
 
 
@@ -401,26 +405,18 @@ namespace UnityFishSimulation
                         if (this.isDirty)
                         {
                             var useSim = true;
-                            FishSimulator simulator = null;
                             if (useSim)
                             {
-                                var problem = new FishSimulator.Problem(this.activationData);
-                                var delta = new FishSimulator.Delta();
-
-
-                                simulator = new FishSimulator(FishSimulator.SolverType.Euler, problem, delta);
-                                simulator.ResetAndRun();
+                                //var controller = new FishController(new FishBody(), new FishBrain());
 
                                 //Debug.Log("start");
                                 //start new simulation to get trajactory
                                 //wait to finish
-                                while (simulator.IsSimulationDone() == false) { }
+                                //while (controller.IsDone == false) { }
                             }
 
-                            var e = GetCurrentE(simulator?.CurrentSolution as FishSimulator.Solution, this.activationData.ToDiscreteFunctions(), this.activationData.SampleNum);
-
-                            if (useSim) simulator.StopThread();
-
+                            var e = 0;// GetCurrentE(simulator?.CurrentSolution as FishSimulator.Solution, this.activationData.ToDiscreteFunctions(), this.activationData.SampleNum);
+                            
                             this.LatestE = e;
                             this.isDirty = false;
                         }
@@ -515,7 +511,7 @@ namespace UnityFishSimulation
 
             public override float Evaluate(Vector<float> x)
             {
-                //from vector x
+                /*//from vector x
                 //convert to X2FDiscreteFunction
                 this.fishActivationData.UpdateFromVector(x);
 
@@ -533,13 +529,13 @@ namespace UnityFishSimulation
                     //Debug.Log("start");
                     //start new simulation to get trajactory
                     //wait to finish
-                    while (simulator.IsSimulationDone() == false) { }
+                    while (simulator. == false) { }
                 }
 
                 var e = GetCurrentE(simulator?.CurrentSolution as FishSimulator.Solution, this.fishActivationData.ToDiscreteFunctions(), this.sampleNum);
 
-                if(useSim) simulator.StopThread();
-
+                if(useSim) simulator.StopThread();*/
+                var e = 0;
                 Debug.Log("end with e = " + e);
                 //cal new E from RandomX2FDiscreteFunction and trajactory
 
@@ -666,7 +662,7 @@ namespace UnityFishSimulation
         FishActivationData current;
         protected void Update()
         {
-            if (Input.GetKeyDown(KeyCode.R))
+            /*if (Input.GetKeyDown(KeyCode.R))
             {
                 var problem = new FishSimulator.Problem(this.current);
                 var delta = new FishSimulator.Delta();
@@ -695,7 +691,7 @@ namespace UnityFishSimulation
                 this.curves.Clear();
                 this.curves.AddRange(activations.ToAnimationCurves());
                 this.curves.AddRange(compare.ToAnimationCurves());
-            }
+            }*/
 
             if(Input.GetKeyDown(KeyCode.S))
             {
@@ -751,8 +747,8 @@ namespace UnityFishSimulation
         }
 
         protected void OnDrawGizmos()
-        {
-            this.simulator?.OnGizmos();
+        {/*
+            this.simulator?.OnGizmos();*/
         }
 
 

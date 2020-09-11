@@ -25,8 +25,8 @@ namespace UnityFishSimulation
             var dt = fishProblem.dt;
             var fish = fishProblem.fish;
 
-            var step = 10;
-            dt = dt / step;
+            var step = 100;
+            dt /= 10;
             foreach (var value in Enumerable.Range(0, step))
             {
                 this.PreSolve(fish);

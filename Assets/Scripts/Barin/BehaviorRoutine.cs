@@ -6,60 +6,42 @@ using UnityEngine;
 
 namespace UnityFishSimulation
 {
-    public abstract class BehaviorRoutine
+    [System.Serializable]
+    public class BehaviorRoutine
     {
-        public abstract List<MotorController> ToMC();
-        public abstract void Init(Intension intension, Perception perception);
-    }
+        protected List<MotorController> motorControllers = new List<MotorController>();
 
-    public class ObstacleAvoidance : BehaviorRoutine
-    {
-        public override void Init(Intension intension, Perception perception)
+
+        protected SwimMC smc;
+
+        [SerializeField] protected List<AnimationCurve> curves;
+        [SerializeField] protected TuningData swimming;
+        public List<MotorController> ToMC()
         {
-
-            //sensory information 
-            //motor preferences
-            //=> MC and MC parameters
+            return this.motorControllers;
         }
-
-        public override List<MotorController> ToMC()
+        public void Init(Intension intension, Perception perception)
         {
-            return default;
-        }
-    }
+            this.motorControllers.Clear();
 
-    public class ChasingTarget : BehaviorRoutine
-    {
-        protected ISensorableObject target;
-        public override void Init(Intension intension, Perception perception)
-        {
-
-            //sensory information 
-            //motor preferences
-            //=> MC and MC parameters
-            //this.target = perception.GetSensorData().closestObject.Position;
-        }
-
-        public override List<MotorController> ToMC()
-        {
-            var ret = new List<MotorController>();
-            ret.Add(new SwimMC());
-            return ret;
-        }
-    }
-
-    public class Wandering : BehaviorRoutine
-    {
-        public override void Init(Intension intension, Perception perception)
-        {
-
-        }
-
-        public override List<MotorController> ToMC()
-        {
-            var ret = new List<MotorController>();
-            ret.Add(new SwimMC());
-            return ret;
+            var focusser = perception.GetFocuser();
+            var motorType = focusser.motorPreference.MaxValue.type;
+            if (motorType == Focusser.MotorPreference.Type.MoveForward)
+            {
+                if(this.smc == null)
+                {
+                    this.smc = this.smc ?? new SwimMC();
+                    this.swimming = this.smc.ActivationData.Tuning;
+                    this.curves = this.smc.ActivationData.ToAnimationCurves();
+                }
+                this.motorControllers.Add(this.smc);
+            }
+            else if (motorType == Focusser.MotorPreference.Type.TurnRight)
+            {
+                var mc = new TurnMC();
+                this.motorControllers.Add(mc);
+            }
         }
     }
 }
+

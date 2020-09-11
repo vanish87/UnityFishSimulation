@@ -548,7 +548,7 @@ namespace UnityFishSimulation
             this.normal = Quaternion.AngleAxis(this.Anlge * Mathf.Rad2Deg, left) * forward;
             this.normal = math.normalize(this.normal);
 
-            this.force = -this.area * math.dot(velocity, this.normal) * this.normal;
+            this.force = -this.area * math.clamp(math.dot(velocity, this.normal),-1,1) * this.normal;
 
             var force = this.force / this.nodeList.Count;
             foreach (var node in this.nodeList)

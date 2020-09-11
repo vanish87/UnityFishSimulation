@@ -15,7 +15,7 @@ namespace UnityFishSimulation
     {
         public class Data
         {
-            internal protected DiscreteFunction<float, float3> trajactory;
+            internal protected DiscreteFunction<float, float3> trajectory;
             internal protected DiscreteFunction<float, float3> velocity;
             internal protected int currentIndex;
         }
@@ -54,8 +54,9 @@ namespace UnityFishSimulation
         [Serializable]
         public class Delta : IDelta
         {
-            public const float dt = 0.055f;
+            protected const float dt = 0.055f;
             public float current;
+            public float deltaTime;
             public void Reset()
             {
                 this.current = 0;
@@ -63,7 +64,8 @@ namespace UnityFishSimulation
 
             public void Step()
             {
-                this.current += dt;
+                this.current += Time.deltaTime;
+                this.deltaTime = Time.deltaTime;
             }
         }
 

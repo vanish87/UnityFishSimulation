@@ -54,12 +54,13 @@ namespace UnityFishSimulation
         [SerializeField] public List<Spring> runtimeSpringList;
         [SerializeField] public List<FinFace> runtimeFinList;
 
-        public FishBrain Brain => this.brain;
+        // public FishBrain Brain => this.brain;
 
-        public bool IsDone { get; set; }
+        // public bool IsDone { get; set; }
 
         public void Reset()
         {
+            //TODO move load to Body
             this.body.modelData = GeometryFunctions.Load();
 
             if (this.solverType == SolverType.Euler)
@@ -85,7 +86,7 @@ namespace UnityFishSimulation
 
         protected void UpdateBrain(FishSimulator.Delta delta)
         {
-            this.brain.UpdateBrain(FishSimulator.Delta.dt);
+            this.brain.UpdateBrain(delta.deltaTime);
         }
 
         protected void ApplyBehaviorRoutine(FishSimulator.Delta delta)
@@ -136,7 +137,7 @@ namespace UnityFishSimulation
 
         protected void UpdateBody(FishSimulator.Delta delta)
         {
-            this.solver.Solve(new FishStructureProblem() { fish = body.modelData, dt = FishSimulator.Delta.dt });
+            this.solver.Solve(new FishStructureProblem() { fish = body.modelData, dt = delta.deltaTime });
         }
 
         protected void UpdateSolution(FishSimulator.Delta delta, FishSimulator.Solution solution)
@@ -145,7 +146,7 @@ namespace UnityFishSimulation
             this.IsDone = delta.current > data.Interval.y;
 */
 
-            if (this.IsDone) delta.Reset();
+            // if (this.IsDone) delta.Reset();
 
             /*return;
             if (delta.current > this.trajactory.GetValueX(this.currentIndex))
