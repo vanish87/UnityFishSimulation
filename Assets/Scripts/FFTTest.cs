@@ -92,7 +92,7 @@ namespace UnityFishSimulation
             {
                 var x = 2 * math.PI * i / (act.SampleNum - 1);
                 //function[i] = (float)(An[0] / 2 + maxAn * math.cos(maxIndex * x + maxPn));
-                function[i] = FishActivationData.GetFx(An, Pn, x, 1);
+                //function[i] = FishActivationData.GetFx(An, Pn, x, 1);
             }
 
             this.curve2 = function.ToAnimationCurve();

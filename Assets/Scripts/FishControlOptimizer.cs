@@ -18,7 +18,6 @@ namespace UnityFishSimulation
     [Serializable]
     public class FishActivationDataSwimming: FishActivationData
     {
-        [SerializeField] protected float speed = 1;
         protected override string FileName => "Swimming";
         protected override List<Spring.Type> GetSpringTypes()
         {
@@ -28,16 +27,15 @@ namespace UnityFishSimulation
         public FishActivationDataSwimming(float2 interval, int sampleNum = 15) : base(interval, sampleNum) { }
     }
     [Serializable]
-    public class FishActivationDataTrun : FishActivationData
+    public class FishActivationDataTurn : FishActivationData
     {
-        [SerializeField] protected float speed = 1;
         protected override string FileName => "TurnRight";
         protected override List<Spring.Type> GetSpringTypes()
         {
             return new List<Spring.Type>() { Spring.Type.MuscleFront, Spring.Type.MuscleMiddle };
         }
 
-        public FishActivationDataTrun(float2 interval, int sampleNum = 15) : base(interval, sampleNum) { }
+        public FishActivationDataTurn(float2 interval, int sampleNum = 15) : base(interval, sampleNum) { }
     }
     [Serializable]
     public class TuningData
@@ -51,16 +49,16 @@ namespace UnityFishSimulation
             public float frequency = 1;
         }
 
-        public List<SpringToData> springToDatas = new List<SpringToData>();
+        public List<SpringToData> springToData = new List<SpringToData>();
         public bool useFFT = true;
 
         public SpringToData GetDataByType(Spring.Type type)
         {
-            var ret = this.springToDatas.Find(sd => sd.type == type);
+            var ret = this.springToData.Find(sd => sd.type == type);
             if (ret == null)
             {
                 ret = new SpringToData() { type = type };
-                this.springToDatas.Add(ret);
+                this.springToData.Add(ret);
             }
             return ret;
         }
@@ -82,14 +80,14 @@ namespace UnityFishSimulation
         }
 
         protected X2FDiscreteFunction<float> sourceFunction;
-        protected List<CosData> cosDatas = new List<CosData>();
+        protected List<CosData> cosData = new List<CosData>();
         public FFTData(X2FDiscreteFunction<float> activation)
         {
             this.sourceFunction = activation;
         }
         public float Evaluate(float x, int level = 1, bool sort = true)
         {
-            var cosFunc = sort ? this.cosDatas.OrderByDescending(a => a.amplitude).ToList() : this.cosDatas;
+            var cosFunc = sort ? this.cosData.OrderByDescending(a => a.amplitude).ToList() : this.cosData;
 
             var count = 0;
             var ret = 0f;
@@ -116,10 +114,10 @@ namespace UnityFishSimulation
 
             LogTool.AssertIsTrue(An.Length == Pn.Length);
 
-            this.cosDatas.Clear();
+            this.cosData.Clear();
             for (var i = 0; i < An.Length; ++i)
             {
-                this.cosDatas.Add(new CosData() { amplitude = (float)An[i], frequency = i, phase = (float)Pn[i] });
+                this.cosData.Add(new CosData() { amplitude = (float)An[i], frequency = i, phase = (float)Pn[i] });
             }
         }
 
@@ -150,46 +148,6 @@ namespace UnityFishSimulation
                 count++;
             }
             return activations;
-        }
-
-        public static void UpdateFFT(List<X2FDiscreteFunction<float>> activations, int fftLevel = 1, bool ordered = false)
-        {
-            foreach (var func in activations)
-            {
-                var vector = func.ToYVector();
-
-                var array = vector.Select(s => (double)s).ToArray();
-                var dft = new DFT();
-
-                dft.Initialize((uint)array.Length);
-                Complex[] cSpectrum = dft.Execute(array);
-
-                var An = DSP.ConvertComplex.ToMagnitude(cSpectrum);
-                var Pn = DSP.ConvertComplex.ToPhaseRadians(cSpectrum);
-
-                for (var i = 0; i < func.SampleNum; ++i)
-                {
-                    var x = 2 * math.PI * i / (func.SampleNum - 1);
-                    func[i] = GetFx(An, Pn, x, fftLevel, ordered);
-                }
-            }
-        }
-        public static float GetFx(double[] An, double[] Pn, float x, int level = 1, bool ordered = false)
-        {
-            var orderedAn = ordered ? An.OrderByDescending(a => a).ToArray() : An;
-
-            var count = 0;
-            var ret = 0f;
-            for (int i = 0; i < An.Length && count++ < level + 1; ++i)
-            {
-                var an = orderedAn[i];
-                var id = An.ToList().IndexOf(an);
-                var pn = Pn[id];
-
-                if (math.abs(an) <= 0.01f) continue;
-                ret += (float)(an * math.cos(id * x + pn));
-            }
-            return ret;
         }
 
         public static void Save(FishActivationData data)
@@ -241,7 +199,7 @@ namespace UnityFishSimulation
             this.sampleNum = sampleNum;
 
             this.activations.Clear();
-            this.tuningData.springToDatas.Clear();
+            this.tuningData.springToData.Clear();
 
             var types = this.GetSpringTypes();
             var start = new Tuple<float, float>(interval.x, 0);
@@ -251,7 +209,7 @@ namespace UnityFishSimulation
                 var func = new X2FDiscreteFunction<float>(start, end, this.sampleNum);
                 this.activations.Add(t, func);
                 this.fftData.Add(t, new FFTData(func));
-                this.tuningData.springToDatas.Add(new TuningData.SpringToData() { type = t });
+                this.tuningData.springToData.Add(new TuningData.SpringToData() { type = t });
             }
         }
         public bool HasType(Spring.Type type) { return this.activations.ContainsKey(type); }
@@ -394,7 +352,7 @@ namespace UnityFishSimulation
                         switch(para.type)
                         {
                             case OptType.Swimming: this.activationData = new FishActivationDataSwimming(para.interval, para.sampleNum);break;
-                            case OptType.Turn: this.activationData = new FishActivationDataTrun(para.interval, para.sampleNum); break;
+                            case OptType.Turn: this.activationData = new FishActivationDataTurn(para.interval, para.sampleNum); break;
                         }
                         
                         this.Generate(this);
