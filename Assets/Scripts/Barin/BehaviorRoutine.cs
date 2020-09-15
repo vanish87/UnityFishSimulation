@@ -13,9 +13,10 @@ namespace UnityFishSimulation
 
 
         protected SwimMC smc;
+        protected TurnMC tmc;
 
         [SerializeField] protected List<AnimationCurve> curves;
-        [SerializeField] protected TuningData swimming;
+        [SerializeField] protected TuningData tuning;
         public List<MotorController> ToMC()
         {
             return this.motorControllers;
@@ -31,17 +32,40 @@ namespace UnityFishSimulation
                 if(this.smc == null)
                 {
                     this.smc = this.smc ?? new SwimMC();
-                    this.swimming = this.smc.ActivationData.Tuning;
+                    this.tuning = this.smc.ActivationData.Tuning;
                     this.curves = this.smc.ActivationData.ToAnimationCurves();
                 }
+                this.smc.UpdateSpeed(focusser.target.obj.distance);
                 this.motorControllers.Add(this.smc);
             }
             else if (motorType == Focusser.MotorPreference.Type.TurnRight)
             {
-                var mc = new TurnMC();
-                this.motorControllers.Add(mc);
+                if(this.tmc == null)
+                {
+                    this.tmc = new TurnMC();
+                    this.tuning = this.tmc.ActivationData.Tuning;
+                    this.curves = this.tmc.ActivationData.ToAnimationCurves();
+                }
+                this.motorControllers.Add(this.tmc);
             }
         }
+
+        protected float GetAngleInFish(float3 targetDirection, float3 normal, float3 left)
+        {
+            normal = math.normalize(normal);
+            var projection = targetDirection - (math.dot(targetDirection, normal) * normal);
+            var angle = math.dot(projection, left);
+            return angle;
+            // var theta = math.PI/5;
+            // var forward = math.PI/2;
+            // //>0 left
+            // //<0 right
+            // var forwardAngle = new float2(math.cos(forward - theta), math.cos(forward + theta));
+            // if(forwardAngle.x > angle && angle > forwardAngle.y) return MotorPreference.Type.MoveForward;
+            // return angle > 0? MotorPreference.Type.TurnLeft:MotorPreference.Type.TurnRight;
+        }
+        
+         
     }
 }
 

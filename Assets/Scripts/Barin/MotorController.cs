@@ -6,6 +6,7 @@ using UnityTools;
 
 namespace UnityFishSimulation
 {
+    [System.Serializable]
     public class MotorController
     {
 
@@ -42,9 +43,10 @@ namespace UnityFishSimulation
         }
     }
 
+    [System.Serializable]
     public class SwimMC : MuscleMC
     {
-        protected float speed = 1;
+        [SerializeField] protected float speed = 1;
         protected override string FileName => "Swimming";
         protected override List<Spring.Type> GetSpringTypes()
         {
@@ -63,9 +65,15 @@ namespace UnityFishSimulation
             //convert from speed to parameter
             return new Parameter();
         }
+        public void UpdateSpeed(float distance)
+        {
+            var maxDis = 20f;
+            this.speed = math.lerp(0, 1, distance / maxDis);
+        }
 
     }
 
+    [System.Serializable]
     public class TurnMC : MuscleMC
     {
         protected Dictionary<int, Parameter> turnAngleMap;

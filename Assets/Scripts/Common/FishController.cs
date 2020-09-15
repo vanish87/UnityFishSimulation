@@ -15,6 +15,13 @@ namespace UnityFishSimulation
             Euler,
             Matrix,
         }
+        public enum ControlMode
+        {
+            Learning,
+            Normal,
+        }
+
+
 
         public Environment Runtime { get; set; }
         public int Order => (int)FishLauncher.LauncherOrder.Default;

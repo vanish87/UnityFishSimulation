@@ -122,7 +122,7 @@ namespace UnityFishSimulation
         [System.Serializable]
         public class Target
         {
-            public ISensorableObject obj;
+            public SensorObject obj;
         }
         [System.Serializable]
         //Intension->MotorPreference->Focus
@@ -194,7 +194,7 @@ namespace UnityFishSimulation
             var targetType = intension.IntensionType == Intension.Type.Eat ? ObjectType.Food : ObjectType.Obstacle;
 
             var sameSide = foods.Where(o=>this.GetMotorPreferenceType(o.obj, perception) == this.motorPreference.MaxValue.type);
-            this.target.obj = sameSide.OrderBy(o=>o.distance).First().obj;
+            this.target.obj = sameSide.OrderBy(o=>o.distance).First();
             //if intension == avoid
 
             //if intension == escape
@@ -220,7 +220,7 @@ namespace UnityFishSimulation
         {
             if(this.target.obj != null)
             {
-                Gizmos.DrawSphere(target.obj.Position, 2);
+                Gizmos.DrawSphere(target.obj.obj.Position, 2);
             }
         }
     }
