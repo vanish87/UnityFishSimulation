@@ -23,9 +23,7 @@ namespace UnityFishSimulation
         [SerializeField] protected float2 timeInterval = new float2(0, 20);
         [SerializeField] protected int sampleNum = 15;
         [SerializeField] protected List<AnimationCurve> curves = new List<AnimationCurve>();
-        [SerializeField] protected TuningData tuning;
 
-        [SerializeField] protected List<float3> traj = new List<float3>();
 
         protected FishActivationData activationData;
         //protected Fish fish;
@@ -33,16 +31,7 @@ namespace UnityFishSimulation
         protected void InitActivations()
         {
             this.activationData = new FishActivationDataSwimming(this.timeInterval, this.sampleNum);
-
-            foreach (var fun in this.activationData.ToDiscreteFunctions())
-            {
-                fun.RandomValues();
-            }
-
-            this.activationData.GenerateFFTData();
-            this.tuning = this.activationData.Tuning;
-            this.tuning.useFFT = false;
-        }
+       }
 
         protected void UpdateAnimations()
         {
@@ -51,8 +40,6 @@ namespace UnityFishSimulation
 
         protected void UpdateAnimationsFunctions()
         {
-            this.activationData[Spring.Type.MuscleMiddle] = new X2FDiscreteFunction<float>(this.curves[0]);
-            this.activationData[Spring.Type.MuscleBack] = new X2FDiscreteFunction<float>(this.curves[1]);
         }
 
         /*protected void UpdateTraj()
@@ -74,13 +61,13 @@ namespace UnityFishSimulation
         {
             if (this.mode == ControlMode.Manual)
             {
-                foreach (var a in this.activationData.ToDiscreteFunctions())
-                {
-                    foreach (var i in System.Linq.Enumerable.Range(0, this.sampleNum))
-                    {
-                        a[i] = this.activation;
-                    }
-                }
+                // foreach (var a in this.activationData.ToDiscreteFunctions())
+                // {
+                //     foreach (var i in System.Linq.Enumerable.Range(0, this.sampleNum))
+                //     {
+                //         a[i] = this.activation;
+                //     }
+                // }
             }
 
             /*
@@ -97,9 +84,8 @@ namespace UnityFishSimulation
 
             if(Input.GetKeyDown(KeyCode.G))
             {
-                foreach (var fun in this.activationData.ToDiscreteFunctions())
                 {
-                    fun.RandomValues();
+                    this.activationData.RandomActivation();
                 }
                 this.UpdateAnimations();
             }
@@ -109,10 +95,10 @@ namespace UnityFishSimulation
         {
             using (new GizmosScope(Color.white, this.transform.localToWorldMatrix))
             {
-                for (var i = 0; i < this.traj.Count - 1; ++i)
-                {
-                    Gizmos.DrawLine(this.traj[i], this.traj[i + 1]);
-                }
+                // for (var i = 0; i < this.traj.Count - 1; ++i)
+                // {
+                //     Gizmos.DrawLine(this.traj[i], this.traj[i + 1]);
+                // }
             }
         }
 

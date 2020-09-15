@@ -55,7 +55,7 @@ namespace UnityFishSimulation
 
             this.activationData = FishActivationData.Load();
 
-            var act = this.activationData.ToDiscreteFunctions()[0];
+            // var act = this.activationData.ToDiscreteFunctions()[0];
             /*for(var i = 0; i < act.SampleNum; ++i)
             {
                 //act[i] = math.sin(2 * math.PI * i / (act.SampleNum-1) * 4);
@@ -63,7 +63,7 @@ namespace UnityFishSimulation
             }
 
             act[3] = act[4] = 1;
-            act[9] = act[10] = 1;*/
+            act[9] = act[10] = 1;
 
             this.curve = act.ToAnimationCurve();
 
@@ -96,6 +96,7 @@ namespace UnityFishSimulation
             }
 
             this.curve2 = function.ToAnimationCurve();
+            */
         }
     }
 }

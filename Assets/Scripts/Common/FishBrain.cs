@@ -8,6 +8,7 @@ namespace UnityFishSimulation
 {
     public class FishBrain : MonoBehaviour
     {
+
         [SerializeField] protected Habits habits = new Habits();
         [SerializeField] protected MentalState mentalState = new MentalState();
         [SerializeField] protected PhysicalState physicalState = new PhysicalState();

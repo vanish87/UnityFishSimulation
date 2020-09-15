@@ -32,7 +32,6 @@ namespace UnityFishSimulation
                 if(this.smc == null)
                 {
                     this.smc = this.smc ?? new SwimMC();
-                    this.tuning = this.smc.ActivationData.Tuning;
                     this.curves = this.smc.ActivationData.ToAnimationCurves();
                 }
                 this.smc.UpdateSpeed(focusser.target.obj.distance);
@@ -43,7 +42,6 @@ namespace UnityFishSimulation
                 if(this.tmc == null)
                 {
                     this.tmc = new TurnMC();
-                    this.tuning = this.tmc.ActivationData.Tuning;
                     this.curves = this.tmc.ActivationData.ToAnimationCurves();
                 }
                 this.motorControllers.Add(this.tmc);
