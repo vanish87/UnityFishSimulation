@@ -15,11 +15,15 @@ namespace UnityFishSimulation
     public class FishModelData
     {
         [SerializeField, Range(0.01f, 1)] protected float damping = 0.05f;
-        [SerializeField] protected Graph<MassPoint, Spring> fishGraph = new Graph<MassPoint, Spring>(23);
+        [SerializeField] protected GraphAdj<MassPoint, Spring> fishGraph = new GraphAdj<MassPoint, Spring>(23);
         [SerializeField] protected List<NormalFace> normalFace = new List<NormalFace>();
+        [SerializeField] protected List<FinFace> pectoralFins = new List<FinFace>();
 
-        public Graph<MassPoint, Spring> FishGraph { get => this.fishGraph; set => this.fishGraph = value; }
+        internal protected List<MassPoint> fishGeoNodes = new List<MassPoint>();
+
+        public GraphAdj<MassPoint, Spring> FishGraph { get => this.fishGraph; set => this.fishGraph = value; }
         public List<NormalFace> FishNormalFace { get => this.normalFace; }
+        public List<FinFace> FishPectoralFins { get => this.pectoralFins; }
         public float Damping { get => this.damping; }
 
         public List<Spring> GetSpringByType(List<Spring.Type> types)
@@ -31,14 +35,13 @@ namespace UnityFishSimulation
         {
             get
             {
-                var edges = this.GetSpringByType(new List<Spring.Type>() { Spring.Type.MuscleMiddle });
-                var center = float3.zero;
-                foreach (var n in edges)
+                var ret = float3.zero;
+                foreach(var node in this.fishGeoNodes)
                 {
-                    center += n.Left.Position;
-                    center += n.Right.Position;
+                    ret += node.Position;
                 }
-                return center / (edges.Count * 2);
+
+                return ret / this.fishGeoNodes.Count;
             }
         }
 
@@ -46,18 +49,37 @@ namespace UnityFishSimulation
         {
             get
             {
-                var vel = float3.zero;
-                foreach (var n in this.FishGraph.Nodes)
+                var ret = float3.zero;
+                foreach (var node in this.fishGeoNodes)
                 {
-                    vel += n.Velocity;
+                    ret += node.Velocity;
                 }
-                return vel / this.FishGraph.Nodes.ToList().Count;
+                return ret / this.fishGeoNodes.Count;
             }
         }
 
-        public float3 Direction { get => this.Head.Position - this.GeometryCenter; }
+        public float3 Normal
+        {
+            get
+            {
+                var list = this.FishGraph.Nodes.ToList();
+                var min = (list[5].Position + list[6].Position) / 2;
+                var y = min - this.GeometryCenter;
+                return math.normalize(y);
+            }
+        }
 
-        public MassPoint Head { get => this.FishGraph.Nodes.ToList()[0]; }
+        public Matrix4x4 WordToLocalMatrix { get => Matrix4x4.TRS(this.GeometryCenter, Quaternion.FromToRotation(new float3(1, 0, 0), this.Direction), new float3(1, 1, 1)); }
+
+        public float3 Left { get => math.normalize(math.cross(this.Direction, this.Normal)); }
+
+        public float3 Direction { get => math.normalize(this.Head.Position - this.GeometryCenter); }
+        //0, 
+        //1,2,3,4
+        //17,18,19,20
+        //21,22
+
+        public MassPoint Head { get => this.FishGraph.Nodes.First(); }
 
         public void OnGizmos(Dictionary<Spring.Type, Color> springColorMap)
         {
@@ -78,12 +100,28 @@ namespace UnityFishSimulation
 
                 foreach (var n in this.FishNormalFace) n.OnGizmos(200 * Unit.WorldMMToUnityUnit);
 
+                foreach (var f in this.FishPectoralFins) f.OnGizmos();
+
                 //Gizmos.DrawLine(Vector3.zero, this.totalForce);
+
+                var localAxisScale = 10;
 
                 using (new GizmosScope(Color.red, Matrix4x4.identity))
                 {
-                    Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Direction);
+                    Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Direction * localAxisScale);
                     Gizmos.DrawLine(this.Head.Position, this.Head.Position + this.Velocity);
+
+                    Gizmos.DrawSphere(this.GeometryCenter, 50 * Unit.WorldMMToUnityUnit);
+                }
+
+                using (new GizmosScope(Color.green, Matrix4x4.identity))
+                {
+                    Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Normal * localAxisScale);
+                }
+
+                using (new GizmosScope(Color.blue, Matrix4x4.identity))
+                {
+                    Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Left * localAxisScale);
                 }
             }
         }
@@ -91,7 +129,7 @@ namespace UnityFishSimulation
 
     public static class GeometryFunctions
     {
-        static object lockObj = new object();
+        private static object lockObj = new object();
         public static FishModelData fish;
         public static Dictionary<Spring.Type, Color> springColorMap = new Dictionary<Spring.Type, Color>()
         {
@@ -109,22 +147,39 @@ namespace UnityFishSimulation
         }
         public static FishModelData Load(string fileName = "fish.model")
         {
-            var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
-
-            lock (lockObj)
+            lock(lockObj)
             {
-                if (fish == null) LogTool.Log("Loaded " + path);
-                fish = fish ?? FileTool.Read<FishModelData>(path);
+                try
+                {
+                    var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
+                    if (fish == null) LogTool.Log("Loaded " + path);
+                    fish = fish ?? FileTool.Read<FishModelData>(path);
+                }
+                catch (System.Exception e)
+                {
+                    LogTool.Log(e.ToString(), LogLevel.Error);
+                }
+
+                if (fish == null)
+                {
+                    fish = new FishModelData();
+                    InitNewFishModel(fish);
+                    Save(fish);
+                }
+
+                return fish.DeepCopy();
             }
-            return fish.DeepCopy();
         }
 
         public static void InitNewFishModel(FishModelData fish)
         {
-            fish.FishGraph.AdjMatrix.Clear();
+            fish.FishGraph.Clear();
             InitNodes(fish);
             InitSprings(fish);
             InitNormals(fish);
+            InitFins(fish);
+
+            InitGeoNodes(fish);
         }
 
         public static void InitNodes(FishModelData fish)
@@ -348,6 +403,33 @@ namespace UnityFishSimulation
 
             fish.FishGraph.AddEdge(from, to, s);
         }
+
+        public static void InitFins(FishModelData fish)
+        {
+            var nodes = fish.FishGraph.Nodes.ToList();
+            var leftList = new List<MassPoint>();
+            var rightList = new List<MassPoint>();
+            var left = new int[] { 1, 4 };//, 5, 8 , 9, 12 };
+            var right = new int[] { 2, 3 };//, 6, 7 }, 10, 11 };
+            for (var i = 1; i <= 12; ++i)
+            {
+                if(left.Contains(i)) leftList.Add(nodes[i]);
+                if (right.Contains(i)) rightList.Add(nodes[i]);
+            }
+
+            fish.FishPectoralFins.Add(new FinFace(leftList));
+            fish.FishPectoralFins.Add(new FinFace(rightList));
+        }
+
+        public static void InitGeoNodes(FishModelData fish)
+        {
+            var nodeList = fish.FishGraph.Nodes.ToList();
+            fish.fishGeoNodes.Clear();
+            fish.fishGeoNodes.Add(nodeList[5]);
+            fish.fishGeoNodes.Add(nodeList[6]);
+            fish.fishGeoNodes.Add(nodeList[7]);
+            fish.fishGeoNodes.Add(nodeList[8]);
+        }
     }
 
     [System.Serializable]
@@ -367,7 +449,7 @@ namespace UnityFishSimulation
     }
 
     [System.Serializable]
-    public class Spring : Segment<MassPoint>
+    public class Spring : PointSegment<MassPoint>, IEdge
     {
         public enum Type
         {
@@ -411,7 +493,7 @@ namespace UnityFishSimulation
         [SerializeField] protected Type type = Type.Normal;
         [SerializeField] protected Side side = Side.None;
         public float Activation { get => this.activation; set => this.activation = value; }
-        public float CurrentL { get => math.lerp(this.lr, this.lc, this.activation); }
+        public float CurrentL { get => math.lerp(this.lr, this.lc, this.Activation); }
         public float C { get => this.c; }
         public float K { get => this.k; }
         public Type SpringType { get => this.type; }
@@ -419,8 +501,8 @@ namespace UnityFishSimulation
 
         public Spring(Type type, Side side, MassPoint from, MassPoint to)
         {
-            this.Left = from;
-            this.Right = to;
+            this.Start = from;
+            this.End = to;
 
             this.type = type;
             this.side = side;
@@ -446,6 +528,54 @@ namespace UnityFishSimulation
     }
 
     [System.Serializable]
+    public class FinFace : NormalFace
+    {
+        public float Anlge { get => this.angle; set => this.angle = math.clamp(value, math.PI / 4, math.PI); }
+
+        [SerializeField] protected float angle = math.PI / 2;
+        [SerializeField] protected float area = 1;
+        protected float3 force;
+        public FinFace(List<MassPoint> nodes)
+        {
+            this.nodeList.Clear();
+            this.nodeList.AddRange(nodes);
+
+            this.normal = new float3(0, 1, 0);
+            this.area = 5;
+        }
+        public void ApplyFinForce(float3 velocity, float3 left, float3 forward)
+        {
+            this.normal = Quaternion.AngleAxis(this.Anlge * Mathf.Rad2Deg, left) * forward;
+            this.normal = math.normalize(this.normal);
+
+            this.force = -this.area * math.clamp(math.dot(velocity, this.normal),-1,1) * this.normal;
+
+            var force = this.force / this.nodeList.Count;
+            foreach (var node in this.nodeList)
+            {
+                node.Force += force;
+            }
+        }
+
+        public override void OnGizmos(float length = 1)
+        {
+            using (new GizmosScope(Color.yellow, Matrix4x4.identity))
+            {
+                var center = float3.zero;
+
+                foreach (var node in this.nodeList)
+                {
+                    center += node.Position;
+                }
+                center /= this.nodeList.Count;
+
+                Gizmos.DrawLine(center, center + this.force);
+                //Gizmos.DrawLine(center, center + this.normal * 20);
+            }
+        }
+    }
+
+    [System.Serializable]
     public class NormalFace
     {
         [SerializeField] protected float3 normal;
@@ -459,6 +589,7 @@ namespace UnityFishSimulation
                 return this.normal;
             }
         }
+        public NormalFace() { }
         public NormalFace(MassPoint p1, MassPoint p2, MassPoint p3, MassPoint p4)
         {
             this.nodeList.Add(p1);
@@ -468,7 +599,7 @@ namespace UnityFishSimulation
         }
 
         float3 force;
-        public void OnGizmos(float length = 1)
+        public virtual void OnGizmos(float length = 1)
         {
             var p1 = this.nodeList[0].Position;
             var p2 = this.nodeList[1].Position;
@@ -513,7 +644,7 @@ namespace UnityFishSimulation
             }
         }
 
-        protected void CalNormal()
+        protected virtual void CalNormal()
         {
             var p1 = this.nodeList[0].Position;
             var p2 = this.nodeList[1].Position;
@@ -533,7 +664,7 @@ namespace UnityFishSimulation
             return 0.5f * math.length(v1) * math.length(v2) * sin;
         }
 
-        protected float CalArea()
+        protected virtual float CalArea()
         {
             var p1 = this.nodeList[0].Position;
             var p2 = this.nodeList[1].Position;
