@@ -45,7 +45,6 @@ namespace UnityFishSimulation
 
         protected FishSimulator.Delta localDelta;
         protected FishLogger logger;
-        protected ControlMode controlMode = ControlMode.Normal;
 
         [SerializeField] protected FishActivationData customData;
         [SerializeField] public List<MassPoint> runtimeList;
@@ -55,11 +54,10 @@ namespace UnityFishSimulation
 
         // public FishBrain Brain => this.brain;
 
-        public bool IsDone { get; set; }
+        // public bool IsDone { get; set; }
 
-        public void Init(ControlMode mode = ControlMode.Normal)
+        public void Init()
         {
-            this.controlMode = mode;
             this.body = this.GetComponentInChildren<FishBody>();
             this.body.Init();
 
@@ -67,7 +65,7 @@ namespace UnityFishSimulation
             this.brain.Init();
 
             this.logger = this.logger ?? new FishLogger();
-            this.localDelta = this.localDelta??new FishSimulator.Delta();
+            this.localDelta = this.localDelta ?? new FishSimulator.Delta();
 
             this.Reset();
             FishSimulatorRunner.Instance.Controller.AddController(this);
@@ -110,41 +108,33 @@ namespace UnityFishSimulation
             var t = delta.current;
             var types = new List<Spring.Type>() { Spring.Type.MuscleFront, Spring.Type.MuscleMiddle, Spring.Type.MuscleBack };
 
-            if (this.controlMode == ControlMode.Learning)
+
+            var routine = this.brain.GetBehaviorRoutine();
+
+            foreach (var mc in routine.ToMC().Select(mc => mc as MuscleMC))
             {
+                var data = mc.ActivationData;
+
                 foreach (var type in types)
                 {
-                    this.ApplyActivation(t, this.customData, type);
+                    //get motor controller from brain
+                    var parameter = mc.GetParameter(type);
+
+                    this.ApplyActivation(t, mc.ActivationData, type, parameter);
                 }
             }
-            else
-            {
-                var routine = this.brain.GetBehaviorRoutine();
 
-                foreach (var mc in routine.ToMC().Select(mc => mc as MuscleMC))
-                {
-                    var data = mc.ActivationData;
-
-                    foreach (var type in types)
-                    {
-                        //get motor controller from brain
-                        var parameter = mc.GetParameter(type);
-
-                        this.ApplyActivation(t, mc.ActivationData, type, parameter);
-                    }
-                }
-            }
         }
 
-        protected void ApplyActivation(float t, FishActivationData data, Spring.Type type, MuscleMC.Parameter muscleMC = null)
+        protected void ApplyActivation(float t, FishActivationData data, Spring.Type type, MuscleMC.Parameter muscleMC)
         {
 
             var muscle = body.modelData.GetSpringByType(new List<Spring.Type>() { type });
             var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
             var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
 
-            var f = muscleMC == null ? 1 : muscleMC.frequency;
-            var a = muscleMC == null ? 1 : muscleMC.amplitude;
+            var f = muscleMC.frequency;
+            var a = muscleMC.amplitude;
             {
                 var lvalue = data.Evaluate(t * f, (type, Spring.Side.Left)) * a;
                 var rvalue = data.Evaluate(t * f, (type, Spring.Side.Right)) * a;
@@ -174,15 +164,15 @@ namespace UnityFishSimulation
 
         protected void UpdateSolution(FishSimulator.Delta delta, FishSimulator.Solution solution)
         {
-            if(this.controlMode == ControlMode.Normal)
-            {
+            // if (this.controlMode == ControlMode.Normal)
+            // {
 
-            }
-            else
-            {
-                var data = this.customData.Interval;
-                this.IsDone = delta.current > data.y;
-            }
+            // }
+            // else
+            // {
+            //     var data = this.customData.Interval;
+            //     this.IsDone = delta.current > data.y;
+            // }
             /*var data = this.brain.Current;
             this.IsDone = delta.current > data.Interval.y;
 */
