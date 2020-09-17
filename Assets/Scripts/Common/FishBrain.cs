@@ -38,7 +38,7 @@ namespace UnityFishSimulation
             var intension = this.intensionGenerator.Generate(this.perception, this.habits, this.mentalState, this.physicalState, t);
 
             this.mentalState.UpdateDesire(t, this.physicalState, this.perception.GetSensorData(), intension);
-            this.perception.UpdateFocusser(intension, this.mentalState);
+            this.perception.FocusserUpdate(intension, this.mentalState);
 
             var behaviorRoutine = this.GenerateBehaviorRoutine(intension, this.perception);
             this.UpdateBehaviorRoutine(behaviorRoutine);

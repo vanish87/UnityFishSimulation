@@ -131,6 +131,7 @@ GameObject:
   m_Component:
   - component: {fileID: 785274050}
   - component: {fileID: 785274049}
+  - component: {fileID: 785274051}
   m_Layer: 0
   m_Name: Preview
   m_TagString: Untagged
@@ -152,17 +153,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mode: 1
   stepMode: 1
-  activation: 0.5
+  activation: 0
   timeInterval:
     x: 0
-    y: 60
+    y: 20
   sampleNum: 15
   curves: []
-  traj: []
-  simulator:
-    runtimeList: []
-    runtimeMuscleList: []
-    runtimeSpringList: []
 --- !u!4 &785274050
 Transform:
   m_ObjectHideFlags: 0
@@ -177,6 +173,22 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &785274051
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 785274048}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2561bd0319c38144cbc60697f824b9fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  modelData:
+    damping: 0.05
+    normalFace: []
+    pectoralFins: []
 --- !u!1 &1371400465
 GameObject:
   m_ObjectHideFlags: 0

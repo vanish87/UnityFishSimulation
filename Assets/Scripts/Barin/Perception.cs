@@ -100,7 +100,7 @@ namespace UnityFishSimulation
         {
             this.visionSensor.Scan(this.sensorData);
         }
-        public void UpdateFocusser(Intension intension, MentalState mental)
+        public void FocusserUpdate(Intension intension, MentalState mental)
         {
             this.focusser.Update(intension, this, mental);
         }

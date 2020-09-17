@@ -95,12 +95,12 @@ namespace UnityFishSimulation
         }
 
         protected X2FDiscreteFunction<float> sourceFunction;
-        protected List<CosData> cosData = new List<CosData>();
+        [SerializeField] protected List<CosData> cosData = new List<CosData>();
         public FFTData(X2FDiscreteFunction<float> activation)
         {
             this.sourceFunction = activation;
         }
-        public float Evaluate(float x, int level = 1, bool sort = true)
+        public float Evaluate(float x, int level = 2, bool sort = false)
         {
             var cosFunc = sort ? this.cosData.OrderByDescending(a => a.amplitude).ToList() : this.cosData;
 
@@ -111,7 +111,7 @@ namespace UnityFishSimulation
                 if (math.abs(cosFunc[i].amplitude) <= 0.01f) continue;
                 ret += cosFunc[i].Evaluate(x);
             }
-            return ret + 0.5f;
+            return ret;
 
         }
         public void GenerateFFTData()
@@ -155,8 +155,8 @@ namespace UnityFishSimulation
         public FFTData FFT => this.fftData;
         public TuningData Tuning => this.tuningData;
         protected X2FDiscreteFunction<float> discreteFunction;
-        protected FFTData fftData;
-        protected TuningData tuningData;
+        [SerializeField] protected FFTData fftData;
+        [SerializeField] protected TuningData tuningData;
 
         public ActivationData(float2 interval, int sampleNum)
         {
@@ -183,7 +183,8 @@ namespace UnityFishSimulation
 
         public void RandomData()
         {
-            this.discreteFunction.RandomValues();
+            this.discreteFunction.RandomValues(-1,1);
+            this.fftData.GenerateFFTData();
         }
 
         protected float ApplyTuning(float value)
@@ -245,9 +246,9 @@ namespace UnityFishSimulation
 
         //public Dictionary<Spring.Type, X2FDiscreteFunction<float>> Activations { get => this.activations; }
 
-        public X2FDiscreteFunction<float> this[Spring.Type type, Spring.Side side]
+        public ActivationData this[Spring.Type type, Spring.Side side]
         {
-            set => this.activations[(type, side)].DiscreteFunction = value;
+            get=>this.activations[(type, side)];
         }
 
         public FishActivationData() : this(new float2(0, 1)) { }
@@ -264,7 +265,6 @@ namespace UnityFishSimulation
                 this.activations.Add(t, new ActivationData(this.interval, this.sampleNum));
             }
         }
-        public bool HasType((Spring.Type, Spring.Side) type) { return this.activations.ContainsKey(type); }
         public float Evaluate(float x, (Spring.Type, Spring.Side) type)
         {
             var ret = 0f;
@@ -293,5 +293,11 @@ namespace UnityFishSimulation
             }
             return ret;
         }
+
+        public List<ActivationData> ToActivationList()
+        {
+            return this.activations.Values.ToList();
+        }
+        protected bool HasType((Spring.Type, Spring.Side) type) { return this.activations.ContainsKey(type); }
     }
 }

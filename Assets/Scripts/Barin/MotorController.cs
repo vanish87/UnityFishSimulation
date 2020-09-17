@@ -19,7 +19,7 @@ namespace UnityFishSimulation
         {
             public readonly float2 aMinMax = new float2(0, 1);
             public readonly float2 fMinMax = new float2(0, 0.075f);
-            public float amplitude;
+            public float amplitude = 1;
             public float frequency = 1;
         }
         protected FishActivationData activationData;

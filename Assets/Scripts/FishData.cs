@@ -164,7 +164,7 @@ namespace UnityFishSimulation
                 {
                     fish = new FishModelData();
                     InitNewFishModel(fish);
-                    Save(fish);
+                    Save(fish, fileName);
                 }
 
                 return fish.DeepCopy();
@@ -631,8 +631,8 @@ namespace UnityFishSimulation
             var force = -mu * area * math.length(v) * (math.dot(n, v) * n);
             //force = math.min(0, force);
 
-            var anlge = math.dot(n, math.normalize(force));
-            if (anlge > 0) force = 0;
+            var angle = math.dot(n, math.normalize(force));
+            if (angle > 0) force = 0;
 
             var num = this.nodeList.Count;
             force /= num;

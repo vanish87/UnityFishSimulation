@@ -187,7 +187,7 @@ namespace UnityFishSimulation
                 this.currentIndex++;
             }*/
 
-            this.logger.Log();
+            this.logger.Log(this.body.modelData, delta.current);
         }
 
         public void MainUpdate(FishSimulator.Delta delta, FishSimulator.Solution solution)

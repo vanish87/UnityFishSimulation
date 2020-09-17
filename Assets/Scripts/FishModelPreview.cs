@@ -19,18 +19,20 @@ namespace UnityFishSimulation
 
         [SerializeField] protected ControlMode mode = ControlMode.Activations;
         [SerializeField] protected IterationAlgorithmMode stepMode = IterationAlgorithmMode.FullStep;
-        [SerializeField, Range(0, 1)] protected float activation = 0.5f;
+        [SerializeField, Range(-1, 1)] protected float activation = 0f;
         [SerializeField] protected float2 timeInterval = new float2(0, 20);
         [SerializeField] protected int sampleNum = 15;
         [SerializeField] protected List<AnimationCurve> curves = new List<AnimationCurve>();
 
 
         protected FishActivationData activationData;
-        //protected Fish fish;
+        protected FishBody fish;
+        protected FishSimulatorOffline sim;
         
         protected void InitActivations()
         {
             this.activationData = new FishActivationDataSwimming(this.timeInterval, this.sampleNum);
+            this.activationData.RandomActivation();
        }
 
         protected void UpdateAnimations()
@@ -42,45 +44,49 @@ namespace UnityFishSimulation
         {
         }
 
-        /*protected void UpdateTraj()
-        {
-            this.traj.Clear();
-            var sol = this.simulator.CurrentSolution as FishSimulator.Solution;
-            this.traj.AddRange(sol.trajactory.ToYVector());
-        }*/
-
         protected void Start()
         {
-            //this.fish = this.GetComponent<Fish>();
+            this.fish = this.GetComponent<FishBody>();
+            this.fish.Init();
 
             this.InitActivations();
             this.UpdateAnimations();
+            var problem = new FishSimulatorOffline.Problem(this.fish.modelData, this.activationData);
+            var dt = new IterationDelta();
+            this.sim = new FishSimulatorOffline(problem, dt);
+            this.sim.TryToRun();
         }
 
         protected void Update()
         {
             if (this.mode == ControlMode.Manual)
             {
-                // foreach (var a in this.activationData.ToDiscreteFunctions())
-                // {
-                //     foreach (var i in System.Linq.Enumerable.Range(0, this.sampleNum))
-                //     {
-                //         a[i] = this.activation;
-                //     }
-                // }
+                var types = new List<Spring.Type>(){Spring.Type.MuscleMiddle, Spring.Type.MuscleBack};
+                foreach (var t in types)
+                {
+                    var a = this.activationData[t, Spring.Side.Left];
+                    a.Tuning.useFFT = false;
+                    a.DiscreteFunction.ResetValues(this.activation);
+                    a = this.activationData[t, Spring.Side.Right];
+                    a.Tuning.useFFT = false;
+                    var ra = (this.activation + 1) * 0.5f;
+                    ra = 1 - ra;
+                    ra = ra * 2 - 1;
+                    a.DiscreteFunction.ResetValues(ra);
+                }
             }
 
-            /*
+            
 
             if (Input.GetKey(KeyCode.S))
             {
-                fish.sim.TryToRun();
+                this.sim.TryToRun();
             }
             if(Input.GetKeyDown(KeyCode.R))
             {
                 this.UpdateAnimationsFunctions();
-                fish.sim.ResetAndRun();
-            }*/
+                this.sim.TryToRun();
+            }
 
             if(Input.GetKeyDown(KeyCode.G))
             {
@@ -93,12 +99,17 @@ namespace UnityFishSimulation
 
         protected void OnDrawGizmos()
         {
+            var sol = this.sim?.CurrentSolution as FishSimulatorOffline.Solution;
             using (new GizmosScope(Color.white, this.transform.localToWorldMatrix))
             {
-                // for (var i = 0; i < this.traj.Count - 1; ++i)
-                // {
-                //     Gizmos.DrawLine(this.traj[i], this.traj[i + 1]);
-                // }
+                if(sol != null)
+                {
+                    var logPos = sol.logger.LogData.trajectory.ToYVector();
+                    for(var i = 0; i < logPos.Size-1; ++i)
+                    {
+                        Gizmos.DrawLine(logPos[i], logPos[i + 1]);
+                    }
+                }
             }
         }
 

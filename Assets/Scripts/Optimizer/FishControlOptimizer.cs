@@ -17,8 +17,7 @@ namespace UnityFishSimulation
 {
     public class FishControlOptimizer : MonoBehaviour
     {
-        [SerializeField] protected FishController controller;
-        protected static float GetCurrentE(FishSimulator.Solution sol, List<X2FDiscreteFunction<float>> activations, int sampleSize)
+        protected static float GetCurrentE(FishLogger logger, FishActivationData activationData)
         {
             var mu1 = 0.5f;
             var mu2 = 0.5f;
@@ -34,43 +33,39 @@ namespace UnityFishSimulation
 
             var E = 0f;
 
-            var useSol = sol != null;
-
-            //var trajactory = sol?.trajactory;
-            //var velocity = sol?.velocity;
-
-
-            var goalPos = new float3(0, 0, -100);
+            var goalPos = new float3(0, 0, 100);
             var orgPos = new float3(0, 0, 0);
             var goalVel = 10f;
 
-            var Ev = 0;// useSol ? math.length(trajactory.End.Item2 - goalPos) / math.length(goalPos - orgPos) : 0;
-            //Ev += useSol ? -trajactory.End.Item2.x / goalVel : 0;
-
-
-            for (int i = 0; i < sampleSize; ++i)
+            var Ev = 0f;
+            foreach (var pos in logger.LogData.trajectory.ToYVector())
             {
-                var Eu = 0f;
-                //var Ev = useSol ? math.length(trajactory[i] - goalPos) : 0;
-                //Ev /= math.length(goalPos - orgPos) * sampleSize;
-                //Ev += useSol ? -velocity[i].x : 0;
-                //var Ev = 0;
+                Ev += math.distance(pos, goalPos) / math.distance(orgPos, goalPos);
+            }
+
+            Ev += -logger.LogData.velocity.ToYVector().Last().x / goalVel;
 
 
-                var du = 0f;
-                var du2 = 0f;
-                foreach (var fun in activations)
+            var Eu = 0f;
+            {
+                foreach (var activation in activationData.ToActivationList())
                 {
-                    var dev = fun.Derivate(i);
-                    var dev2 = fun.Derivate2(i);
-                    du += dev * dev;
-                    du2 += dev2 * dev2;
+                    var du = 0f;
+                    var du2 = 0f;
+                    var func = activation.DiscreteFunction;
+                    for (var i = 0; i < func.SampleNum; ++i)
+                    {
+                        var dev = func.Derivate(i);
+                        var dev2 = func.Derivate2(i);
+                        du += dev * dev;
+                        du2 += dev2 * dev2;
+                    }
+                    Eu += 0.5f * (v1 * du + v2 * du2);
                 }
 
-                Eu = 0.5f * (v1 * du + v2 * du2);
 
-                E += mu1 * Eu + mu2 * Ev;
             }
+            E = mu1 * Eu + mu2 * Ev;
 
             return E;
         }
@@ -105,13 +100,13 @@ namespace UnityFishSimulation
                     public Data() { Assert.IsTrue(false); }
                     public Data(Parameter para)
                     {
-                        switch(para.type)
+                        switch (para.type)
                         {
-                            case OptType.Swimming: this.activationData = new FishActivationDataSwimming(para.interval, para.sampleNum);break;
+                            case OptType.Swimming: this.activationData = new FishActivationDataSwimming(para.interval, para.sampleNum); break;
                             case OptType.TurnLeft: this.activationData = new FishActivationDataTurnLeft(para.interval, para.sampleNum); break;
                             case OptType.TurnRight: this.activationData = new FishActivationDataTurnRight(para.interval, para.sampleNum); break;
                         }
-                        
+
                         this.Generate(this);
                     }
 
@@ -119,22 +114,30 @@ namespace UnityFishSimulation
                     {
                         if (this.isDirty)
                         {
+                            var logger = new FishLogger();
                             var useSim = true;
                             if (useSim)
                             {
-
-                                //Debug.Log("start");
                                 //start new simulation to get trajactory
-                                //wait to finish
-                                //while (controller.IsDone == false) { }
+                                var body = GeometryFunctions.Load();
+                                var problem = new FishSimulatorOffline.Problem(body, this.activationData);
+                                var dt = new IterationDelta();
+                                var sim = new FishSimulatorOffline(problem, dt);
+                                sim.TryToRun();
+                                // wait to finish
+                                var sol = sim.CurrentSolution as FishSimulatorOffline.Solution;
+                                while (sol.IsDone == false) { }
+                                logger = sol.logger.DeepCopy();
+                                sim.Dispose();
                             }
 
-                            var e = 0;// GetCurrentE(simulator?.CurrentSolution as FishSimulator.Solution, this.activationData.ToDiscreteFunctions(), this.activationData.SampleNum);
-                            
+                            var e = GetCurrentE(logger, this.activationData);
+
                             this.LatestE = e;
                             this.isDirty = false;
+
+                            // Debug.Log("end with e = " + this.LatestE);
                         }
-                        //Debug.Log("end with e = " + e);
                         //cal new E from RandomX2FDiscreteFunction and trajactory
 
                         return this.LatestE;
@@ -184,8 +187,8 @@ namespace UnityFishSimulation
                 this.state.MoveToNext();
             }
 
-            int maxCount = 0;
-            int minCount = 0;
+            [SerializeField] protected int maxCount = 0;
+            [SerializeField] protected int minCount = 0;
             public override void Cool(bool useNext)
             {
                 if (useNext) this.minCount++;
@@ -227,7 +230,6 @@ namespace UnityFishSimulation
 
         [SerializeField] protected float2 timeInterval = new float2(0, 20);
         [SerializeField] protected int sampleNum = 15;
-        [SerializeField] protected int fftLevel = 1;
         [SerializeField] protected string fileName = "SAProblem.data";
 
         protected IterationAlgorithm algorithm;
@@ -238,10 +240,12 @@ namespace UnityFishSimulation
         protected FishSimulator simulator;
 
         [SerializeField] protected List<AnimationCurve> curves = new List<AnimationCurve>();
-        
+        [SerializeField] protected SAProblem sa;
+
         protected void StartSA(SAProblem sa)
         {
             p = sa;
+            this.sa = sa;
             var d = new Delta();
             this.algorithm = new SimulatedAnnealing(p, d);
             this.algorithm.TryToRun();
@@ -291,11 +295,16 @@ namespace UnityFishSimulation
 
             return ret;
         }
-        
+
 
         protected void Start()
         {
-            this.StartSA(new SAProblem(this.timeInterval, this.sampleNum, SAProblem.OptType.Swimming));
+            var p = new SAProblem(this.timeInterval, this.sampleNum, SAProblem.OptType.Swimming) 
+            {
+                temperature = 5000, 
+                minTemperature = 1 
+            };
+            this.StartSA(p);
         }
 
         FishActivationData current;
@@ -332,7 +341,7 @@ namespace UnityFishSimulation
                 this.curves.AddRange(compare.ToAnimationCurves());
             }*/
 
-            if(Input.GetKeyDown(KeyCode.S))
+            if (Input.GetKeyDown(KeyCode.S))
             {
                 var problem = (this.p) as SAProblem;
                 if (problem != null)
@@ -346,13 +355,13 @@ namespace UnityFishSimulation
                 var act = (problem.Current as SAProblem.ActivationState.Data).ActivationData;
                 FishActivationData.Save(act);
             }
-            if(Input.GetKeyDown(KeyCode.L))
+            if (Input.GetKeyDown(KeyCode.L))
             {
                 var problem = (this.p) as SAProblem;
                 if (problem != null)
                 {
                     var data = this.LoadData(this.fileName);
-                    if(data != null)
+                    if (data != null)
                     {
                         this.algorithm.Dispose();
 
