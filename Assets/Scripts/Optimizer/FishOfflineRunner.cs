@@ -24,6 +24,9 @@ namespace UnityFishSimulation
             // this.activationData = new FishActivationDataSwimming(this.interval, this.sampleNum);
             //this.activationData.RandomActivation();
             this.activationData = FishActivationData.Load();
+            this.interval = this.activationData.Interval;
+            this.sampleNum = this.activationData.SampleNum;
+
             this.curves = this.activationData.ToAnimationCurves();
             this.activations = this.activationData.ToActivationList();
             

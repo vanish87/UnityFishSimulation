@@ -72,7 +72,9 @@ namespace UnityFishSimulation
 
         }
     }
-    public class IntensionGenerator : MonoBehaviour
+
+    [System.Serializable]
+    public class IntensionGenerator
     {
         public float f0 = 0.5f;//[0.1,0.5]
         public float f1 = 0.8f;//f1 > f0

@@ -69,10 +69,12 @@ namespace UnityFishSimulation
         {
             protected const float dt = 0.055f;
             public float current;
+            public float local;
             public float deltaTime;
             public void Reset()
             {
                 this.current = 0;
+                this.local = 0;
             }
 
             public void Step()

@@ -11,7 +11,6 @@ namespace UnityFishSimulation
     {
         protected List<MotorController> motorControllers = new List<MotorController>();
 
-
         protected SwimMC smc;
         protected TurnMC tmc;
 
@@ -26,6 +25,7 @@ namespace UnityFishSimulation
             this.motorControllers.Clear();
 
             var focusser = perception.GetFocuser();
+
             var motorType = focusser.motorPreference.MaxValue.type;
             if (motorType == Focusser.MotorPreference.Type.MoveForward)
             {
@@ -34,7 +34,10 @@ namespace UnityFishSimulation
                     this.smc = this.smc ?? new SwimMC();
                     this.curves = this.smc.ActivationData.ToAnimationCurves();
                 }
-                this.smc.UpdateSpeed(focusser.target.obj.distance);
+                if(focusser.target.obj != null)
+                {
+                    this.smc.UpdateSpeed(focusser.target.obj.distance);
+                }
                 this.motorControllers.Add(this.smc);
             }
             else if (motorType == Focusser.MotorPreference.Type.TurnRight)

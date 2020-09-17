@@ -158,10 +158,6 @@ MonoBehaviour:
     y: 60
   sampleNum: 15
   curves: []
-  tuning:
-    springToDatas: []
-    useFFT: 1
-  traj: []
 --- !u!4 &130941397
 Transform:
   m_ObjectHideFlags: 0
@@ -203,9 +199,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children:
-  - {fileID: 596394946}
-  - {fileID: 820356467}
+  m_Children: []
   m_Father: {fileID: 1420000644}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -230,10 +224,6 @@ MonoBehaviour:
     hunger: 0
     libido: 0
     fear: 0
-    avoidDesire: 0
-    fearDesire: 0
-    eatDesire: 0
-    mateDesire: 0
   physicalState:
     p_0: 0.00067
     alphah: 0.8
@@ -244,12 +234,16 @@ MonoBehaviour:
     alphal: 0.5
     timeSinceLastMating: 0
     D_0: 200
-  currentIntension: 0
-  currentBehavior:
-    curves: []
-    swimming:
-      springToDatas: []
-      useFFT: 1
+  intensionGenerator:
+    f0: 0.5
+    f1: 0.8
+    r: 0.25
+  currentDesire:
+    avoid: 0
+    fear: 0
+    eat: 0
+    mate: 0
+    intensionType: 0
 --- !u!1 &537294048
 GameObject:
   m_ObjectHideFlags: 0
@@ -325,12 +319,12 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 596394945}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
-  m_Father: {fileID: 262122325}
-  m_RootOrder: 0
+  m_Father: {fileID: 1420000644}
+  m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &596394947
 MonoBehaviour:
@@ -347,8 +341,8 @@ MonoBehaviour:
   debug: 0
   size: 1
   angle: 360
-  Vr: 20
-  Or: 50
+  Vr: 100
+  Or: 150
   Dr: 5
 --- !u!114 &596394948
 MonoBehaviour:
@@ -414,7 +408,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 603707321}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 9.13, y: 0, z: 15}
+  m_LocalPosition: {x: 73.8, y: 0, z: 2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 1620535970}
@@ -613,52 +607,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
---- !u!1 &820356466
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 820356467}
-  - component: {fileID: 820356468}
-  m_Layer: 0
-  m_Name: Behavior
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &820356467
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 820356466}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {fileID: 262122325}
-  m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &820356468
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 820356466}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6ed570968a6a93e48a64dc0d5b5e4dc3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  f0: 0.5
-  f1: 0.8
-  r: 0.25
 --- !u!1 &832280554
 GameObject:
   m_ObjectHideFlags: 0
@@ -739,9 +687,11 @@ MonoBehaviour:
     x: 0
     y: 15
   sampleNum: 15
-  fftLevel: 1
   fileName: SAProblemTurn.data
   curves: []
+  sa:
+    maxCount: 0
+    minCount: 0
 --- !u!4 &871929504
 Transform:
   m_ObjectHideFlags: 0
@@ -772,7 +722,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &921929015
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -992,7 +942,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1275502876
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1129,7 +1079,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1409440324
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1186,6 +1136,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ca49ee74ca9b85547bcf93819def2d4f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  balanceMC:
+    leftFin: 0
+    rightFin: 0
+  currentMC: 
+  swim:
+    speed: 1
+  turn:
+    angle: 0
   runtimeList: []
   runtimeMuscleList: []
   runtimeSpringList: []
@@ -1203,6 +1161,7 @@ Transform:
   m_Children:
   - {fileID: 832280555}
   - {fileID: 262122325}
+  - {fileID: 596394946}
   m_Father: {fileID: 1546662139}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1634,6 +1593,7 @@ MonoBehaviour:
   simulator: {fileID: 0}
   delta:
     current: 0
+    local: 0
     deltaTime: 0
 --- !u!114 &1972905238
 MonoBehaviour:
@@ -1663,7 +1623,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2104118930
 MonoBehaviour:
   m_ObjectHideFlags: 0

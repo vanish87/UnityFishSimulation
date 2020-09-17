@@ -11,11 +11,12 @@ using UnityTools;
 using UnityTools.Algorithm;
 using UnityTools.Common;
 using UnityTools.Debuging;
+using UnityTools.GUITool;
 using UnityTools.Math;
 
 namespace UnityFishSimulation
 {
-    public class FishControlOptimizer : MonoBehaviour
+    public class FishControlOptimizer : MonoBehaviour, GUIMenuGroup.IGUIHandler
     {
         protected static float GetCurrentE(FishLogger logger, FishActivationData activationData)
         {
@@ -146,6 +147,10 @@ namespace UnityFishSimulation
                     {
                         this.isDirty = true;
                         this.activationData.RandomActivation();
+                        foreach(var tuning in this.activationData.ToActivationList())
+                        {
+                            tuning.Tuning.useFFT = false;
+                        }
                         // foreach (var func in this.activationData.ToDiscreteFunctions())
                         {
                             // func.RandomValues();
@@ -308,6 +313,8 @@ namespace UnityFishSimulation
         }
 
         FishActivationData current;
+
+
         protected void Update()
         {
             /*if (Input.GetKeyDown(KeyCode.R))
@@ -399,6 +406,15 @@ namespace UnityFishSimulation
             this.simulator?.OnGizmos();*/
         }
 
+        public string Title =>"SimulatedAnealing";
+        public KeyCode OpenKey => KeyCode.Q;
+        public void OnDrawGUI()
+        {
+            var p = this.p as SAProblem;
+            var e = (p.Current as SAProblem.ActivationState.Data).LatestE;
+            ConfigureGUI.OnGUI(ref p.temperature, "Current Temp");
+            ConfigureGUI.OnGUI(ref e,  "Current E");
+        }
 
     }
 }

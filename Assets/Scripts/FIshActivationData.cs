@@ -275,7 +275,35 @@ namespace UnityFishSimulation
 
             return ret;
         }
+        public void ApplyActivation(float t, Spring.Type type, FishModelData model, MuscleMC.Parameter muscleMC = null)
+        {
+            var muscle = model.GetSpringByType(new List<Spring.Type>() { type });
+            var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
+            var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
 
+            var f = muscleMC == null ? 1 : muscleMC.frequency;
+            var a = muscleMC == null ? 1 : muscleMC.amplitude;
+            {
+                var lvalue = this.Evaluate(t * f, (type, Spring.Side.Left)) * a;
+                var rvalue = this.Evaluate(t * f, (type, Spring.Side.Right)) * a;
+
+                lvalue = (lvalue + 1) * 0.5f;
+                rvalue = (rvalue + 1) * 0.5f;
+                foreach (var l in muscleLeft)
+                {
+                    //l.Activation = act;
+                    //l.Activation = cos;// 
+                    l.Activation = lvalue;
+                }
+                foreach (var r in muscleRight)
+                {
+                    //r.Activation = 1 - act;
+                    //r.Activation = 1 - cos;// 
+                    r.Activation = rvalue;
+                    // r.Activation = 1 - lvalue;
+                }
+            }
+        }
         public void RandomActivation()
         {
             foreach(var a in this.activations)

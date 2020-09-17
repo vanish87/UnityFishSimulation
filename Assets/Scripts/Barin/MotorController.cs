@@ -12,6 +12,7 @@ namespace UnityFishSimulation
 
     }
 
+    [System.Serializable]
     public abstract class MuscleMC : MotorController
     {
         [System.Serializable]
@@ -77,7 +78,7 @@ namespace UnityFishSimulation
     public class TurnMC : MuscleMC
     {
         protected Dictionary<int, Parameter> turnAngleMap;
-        protected float angle = 0;
+        [SerializeField] protected float angle = 0;
         protected override string FileName => "Turn";
         protected override List<Spring.Type> GetSpringTypes()
         {
@@ -118,10 +119,11 @@ namespace UnityFishSimulation
         }
     }
 
+    [System.Serializable]
     public class BalanceMC : MotorController
     {
         protected float3 worldUp = new float3(0, 1, 0);
-        protected float leftFin;
-        protected float rightFin;
+        [SerializeField] protected float leftFin;
+        [SerializeField] protected float rightFin;
     }
 }

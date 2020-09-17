@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityTools.Debuging.EditorTool;
 
 namespace UnityFishSimulation
 {
@@ -92,17 +93,18 @@ namespace UnityFishSimulation
 
         public void Init()
         {
-            this.visionSensor = this.GetComponentInChildren<VisionSensor>();
-            this.temperatureSensor = this.GetComponentInChildren<TemperatureSensor>();
+            this.visionSensor = this.GetComponent<VisionSensor>();
+            this.temperatureSensor = this.GetComponent<TemperatureSensor>();
         }
 
-        public void SensorUpdate(float t)
+        public void SensorUpdate(FishSimulator.Delta delta)
         {
+            this.sensorData.Clear();
             this.visionSensor.Scan(this.sensorData);
         }
-        public void FocusserUpdate(Intension intension, MentalState mental)
+        public void FocusserUpdate(Intension intension, Desire desire)
         {
-            this.focusser.Update(intension, this, mental);
+            this.focusser.Update(intension, this, desire);
         }
         public Focusser GetFocuser(){return this.focusser;}
 
@@ -170,7 +172,7 @@ namespace UnityFishSimulation
         public Target target = new Target();
         //active focus and filter out none-important sensor data
         //save to Target
-        public void Update(Intension intension, Perception perception, MentalState mental)
+        public void Update(Intension intension, Perception perception, Desire desire)
         {
             //get desires
             //avoid, fear, eat, mate
@@ -180,21 +182,21 @@ namespace UnityFishSimulation
             foreach (var f in foods)
             {
                 var mtype = this.GetMotorPreferenceType(f.obj, perception);
-                this.motorPreference[mtype].value += mental.eatDesire;
+                this.motorPreference[mtype].value += desire.eat;
             }
 
             var obstacles = perception.GetSensorData().GetVisiable(ObjectType.Obstacle);
             foreach(var o in obstacles)
             {
                 var mtype = this.GetMotorPreferenceType(o.obj, perception);
-                this.motorPreference[mtype].value -= mental.avoidDesire;
+                this.motorPreference[mtype].value -= desire.avoid;
             }
             //TODO add predator value
 
             var targetType = intension.IntensionType == Intension.Type.Eat ? ObjectType.Food : ObjectType.Obstacle;
 
             var sameSide = foods.Where(o=>this.GetMotorPreferenceType(o.obj, perception) == this.motorPreference.MaxValue.type);
-            this.target.obj = sameSide.OrderBy(o=>o.distance).First();
+            this.target.obj = sameSide.OrderBy(o=>o.distance).FirstOrDefault();
             //if intension == avoid
 
             //if intension == escape
@@ -220,7 +222,10 @@ namespace UnityFishSimulation
         {
             if(this.target.obj != null)
             {
-                Gizmos.DrawSphere(target.obj.obj.Position, 2);
+                using(new GizmosScope(Color.red, Matrix4x4.identity))
+                {
+                    Gizmos.DrawSphere(target.obj.obj.Position, 2);
+                }
             }
         }
     }
