@@ -12,7 +12,8 @@ namespace UnityFishSimulation
         protected List<MotorController> motorControllers = new List<MotorController>();
 
         protected SwimMC smc;
-        protected TurnMC tmc;
+        protected TurnLeftMC tlmc;
+        protected TurnRightMC trmc;
 
         [SerializeField] protected List<AnimationCurve> curves;
         [SerializeField] protected TuningData tuning;
@@ -25,6 +26,9 @@ namespace UnityFishSimulation
             this.motorControllers.Clear();
 
             var focusser = perception.GetFocuser();
+
+            var normal = focusser.target.self.transform.up;
+            var left = focusser.target.self.transform.forward;
 
             var motorType = focusser.motorPreference.MaxValue.type;
             if (motorType == Focusser.MotorPreference.Type.MoveForward)
@@ -40,19 +44,40 @@ namespace UnityFishSimulation
                 }
                 this.motorControllers.Add(this.smc);
             }
+            else if (motorType == Focusser.MotorPreference.Type.TurnLeft)
+            {
+                if(this.tlmc == null)
+                {
+                    this.tlmc = new TurnLeftMC();
+                    this.curves = this.tlmc.ActivationData.ToAnimationCurves();
+                }
+                var dir = focusser.target.obj.obj.Position- new float3(focusser.target.self.transform.position);
+                var angle = this.GetAngleInFish(dir, normal, left);
+                this.tlmc.UpdateAngle(angle);
+                this.motorControllers.Add(this.tlmc);
+            }
             else if (motorType == Focusser.MotorPreference.Type.TurnRight)
             {
-                if(this.tmc == null)
+                if(this.trmc == null)
                 {
-                    this.tmc = new TurnMC();
-                    this.curves = this.tmc.ActivationData.ToAnimationCurves();
+                    this.trmc = new TurnRightMC();
+                    this.curves = this.trmc.ActivationData.ToAnimationCurves();
                 }
-                this.motorControllers.Add(this.tmc);
+                var dir = focusser.target.obj.obj.Position- new float3(focusser.target.self.transform.position);
+                var angle = this.GetAngleInFish(dir, normal, left);
+                this.trmc.UpdateAngle(angle);
+                this.motorControllers.Add(this.trmc);
             }
+
+
+            var balance = new BalanceMC();
+            balance.UpdateBalance(left);
+            this.motorControllers.Add(balance);
         }
 
         protected float GetAngleInFish(float3 targetDirection, float3 normal, float3 left)
         {
+            targetDirection = math.normalize(targetDirection);
             normal = math.normalize(normal);
             var projection = targetDirection - (math.dot(targetDirection, normal) * normal);
             var angle = math.dot(projection, left);

@@ -15,9 +15,24 @@ namespace UnityFishSimulation
             protected FishModelData bodyModel;
             protected FishActivationData activationData;
 
+
+            public FishBody Body=>this.fishBody;
+            public MuscleMC MC=>this.mcData;
+            protected FishBody fishBody;
+            protected MuscleMC mcData;
+
             public Problem(FishModelData model, FishActivationData activationData)
             {
-                this.bodyModel = model;
+                this.UpdateData(model, activationData);
+            }
+            public Problem(FishBody fish, MuscleMC mc)
+            {
+                this.fishBody = fish;
+                this.mcData = mc;
+            }
+            public void UpdateData(FishModelData modelData, FishActivationData activationData)
+            {
+                this.bodyModel = modelData;
                 this.activationData = activationData;
             }
         }
@@ -31,6 +46,12 @@ namespace UnityFishSimulation
             this.currentSolution = new Solution();
         }
 
+        public void Restart()
+        {
+            this.currentSolution = new Solution();
+            this.Reset();
+            this.TryToRun();
+        }
         public override bool IsSolutionAcceptable(ISolution solution)
         {
             var sol = this.currentSolution as Solution;
@@ -42,17 +63,37 @@ namespace UnityFishSimulation
             var p = problem as Problem;
             var idt = this.dt as IterationDelta;
             var sol = this.currentSolution as Solution;
-            this.ApplyActivation(idt.Current, p.BodyModel, p.Activation);
+            var model = p.BodyModel;
+            var activation = p.Activation;
+            if(p.BodyModel != null)
+            {
+                this.ApplyActivation(idt.Current, p.BodyModel, p.Activation);
+            }
+            else
+            {
+                this.ApplyActivation(idt.Current, p.Body, p.MC);
+                model = p.Body.modelData;
+                activation = p.MC.ActivationData;
+            }
 
             var solver = new FishEulerSolver();
-            solver.Solve(new FishStructureProblem() { fish = p.BodyModel, dt = idt.DeltaTime });
+            solver.Solve(new FishStructureProblem() { fish = model, dt = idt.DeltaTime });
 
             // Debug.Log(idt.Current);
             // Debug.Log(idt.DeltaTime);
 
-            sol.IsDone = idt.Current > p.Activation.Interval.y;
-            sol.logger.Log(p.BodyModel, idt.Current);
+            sol.IsDone = idt.Current > activation.Interval.y;
+            sol.logger.Log(model, idt.Current);
             return this.currentSolution;
+        }
+        protected void ApplyActivation(float t, FishBody body, MuscleMC mc)
+        {
+            var types = new List<Spring.Type>() { Spring.Type.MuscleFront, Spring.Type.MuscleMiddle, Spring.Type.MuscleBack };
+            foreach (var type in types)
+            {
+                mc.ActivationData.ApplyActivation(t, type, body.modelData, mc.GetParameter(type));
+            }
+ 
         }
         protected void ApplyActivation(float t, FishModelData modelData, FishActivationData data)
         {

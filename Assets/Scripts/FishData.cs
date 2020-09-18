@@ -530,9 +530,12 @@ namespace UnityFishSimulation
     [System.Serializable]
     public class FinFace : NormalFace
     {
-        public float Anlge { get => this.angle; set => this.angle = math.clamp(value, math.PI / 4, math.PI); }
+        //smaller is down,
+        //bigger is up,
+        //pi is break
+        public float Angle { get => this.angle; set => this.angle = math.clamp(value, math.PI / 4, math.PI); }
 
-        [SerializeField] protected float angle = math.PI / 2;
+        [SerializeField, Range(math.PI/4, math.PI)] protected float angle = math.PI / 2;
         [SerializeField] protected float area = 1;
         protected float3 force;
         public FinFace(List<MassPoint> nodes)
@@ -545,7 +548,7 @@ namespace UnityFishSimulation
         }
         public void ApplyFinForce(float3 velocity, float3 left, float3 forward)
         {
-            this.normal = Quaternion.AngleAxis(this.Anlge * Mathf.Rad2Deg, left) * forward;
+            this.normal = Quaternion.AngleAxis(this.Angle * Mathf.Rad2Deg, left) * forward;
             this.normal = math.normalize(this.normal);
 
             this.force = -this.area * math.clamp(math.dot(velocity, this.normal),-1,1) * this.normal;

@@ -105,6 +105,8 @@ namespace UnityFishSimulation
         public void FocusserUpdate(Intension intension, Desire desire)
         {
             this.focusser.Update(intension, this, desire);
+            //TODO refine this
+            this.focusser.target.self = this.gameObject;
         }
         public Focusser GetFocuser(){return this.focusser;}
 
@@ -125,6 +127,7 @@ namespace UnityFishSimulation
         public class Target
         {
             public SensorObject obj;
+            public GameObject self;
         }
         [System.Serializable]
         //Intension->MotorPreference->Focus

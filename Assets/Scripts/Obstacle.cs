@@ -1,18 +1,21 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 
-public class Obstacle : MonoBehaviour
+namespace UnityFishSimulation
 {
-    // Start is called before the first frame update
-    void Start()
+    public class Obstacle : MonoBehaviour, ISensorableObject
     {
-        
-    }
+        public float3 Position => this.transform.position;
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+        public float Size => 1;
+
+        public ObjectType ObjType => ObjectType.Obstacle;
+
+        public float GetDistance(ISensorableObject other)
+        {
+            return math.distance(this.Position, other.Position);
+        }
+   }
 }

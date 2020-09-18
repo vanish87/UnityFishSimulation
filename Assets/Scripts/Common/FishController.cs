@@ -41,7 +41,7 @@ namespace UnityFishSimulation
 
         [SerializeField] protected string currentMC;
         [SerializeField] protected SwimMC swim;
-        [SerializeField] protected TurnMC turn;
+        [SerializeField] protected TurnLeftMC turn;
 
         protected SolverType solverType = SolverType.Euler;
         protected IAlgorithm solver;
@@ -172,12 +172,21 @@ namespace UnityFishSimulation
                 }
             }
 
+            if(this.balanceMC != null)
+            {
+                var lfin = this.body.modelData.FishPectoralFins[0];
+                var rfin = this.body.modelData.FishPectoralFins[1];
+
+                lfin.Angle = math.lerp(lfin.Angle, math.PI/2 + this.balanceMC.lFin, 0.3f);
+                rfin.Angle = math.lerp(rfin.Angle, math.PI/2 + this.balanceMC.rFin, 0.3f);
+            }
+
             //Debug data
             var fmc = this.muscleMCs.FirstOrDefault();
             if(fmc != null)
             {
                 if (fmc is SwimMC) this.swim = fmc as SwimMC;
-                if (fmc is TurnMC) this.turn = fmc as TurnMC;
+                if (fmc is TurnLeftMC) this.turn = fmc as TurnLeftMC;
                 this.currentMC = fmc.ToString();
             }
             else

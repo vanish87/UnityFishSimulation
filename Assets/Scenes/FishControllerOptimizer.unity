@@ -371,7 +371,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   timeInterval:
     x: 0
-    y: 3
+    y: 3.1415
   sampleNum: 15
   fileName: SAProblem.data
   curves: []
@@ -404,7 +404,7 @@ GameObject:
   - component: {fileID: 1970876667}
   - component: {fileID: 1970876669}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: Preview
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

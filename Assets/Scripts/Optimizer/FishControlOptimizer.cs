@@ -44,8 +44,10 @@ namespace UnityFishSimulation
                 Ev += math.distance(pos, goalPos) / math.distance(orgPos, goalPos);
             }
 
-            Ev += -logger.LogData.velocity.ToYVector().Last().x / goalVel;
-
+            foreach(var vel in logger.LogData.velocity.ToYVector())
+            {
+                Ev += -vel.x / goalVel;
+            }
 
             var Eu = 0f;
             {
@@ -103,7 +105,7 @@ namespace UnityFishSimulation
                     {
                         switch (para.type)
                         {
-                            case OptType.Swimming: this.activationData = new FishActivationDataSwimming(para.interval, para.sampleNum); break;
+                            case OptType.Swimming: this.activationData = new FishActivationDataSwimming(para.interval, para.sampleNum, true); break;
                             case OptType.TurnLeft: this.activationData = new FishActivationDataTurnLeft(para.interval, para.sampleNum); break;
                             case OptType.TurnRight: this.activationData = new FishActivationDataTurnRight(para.interval, para.sampleNum); break;
                         }
@@ -190,6 +192,18 @@ namespace UnityFishSimulation
             public override void MoveToNext()
             {
                 this.state.MoveToNext();
+            }
+
+            public int4 MinMaxCount 
+            {
+                get
+                {
+                    var data = this.Current as ActivationState.Data;
+                    var min = data.ActivationData.SampleNum * data.ActivationData.FunctionCount;
+                    var max = 10 * min;
+
+                    return new int4(this.minCount, min, this.maxCount, max);
+                }
             }
 
             [SerializeField] protected int maxCount = 0;
@@ -306,8 +320,8 @@ namespace UnityFishSimulation
         {
             var p = new SAProblem(this.timeInterval, this.sampleNum, SAProblem.OptType.Swimming) 
             {
-                temperature = 5000, 
-                minTemperature = 1 
+                temperature = 5, 
+                minTemperature = 0.1f 
             };
             this.StartSA(p);
         }
@@ -412,8 +426,10 @@ namespace UnityFishSimulation
         {
             var p = this.p as SAProblem;
             var e = (p.Current as SAProblem.ActivationState.Data).LatestE;
+            var minMax = new UnityEngine.Vector4(p.MinMaxCount.x, p.MinMaxCount.y, p.MinMaxCount.z, p.MinMaxCount.w);
             ConfigureGUI.OnGUI(ref p.temperature, "Current Temp");
             ConfigureGUI.OnGUI(ref e,  "Current E");
+            ConfigureGUI.OnGUI(ref minMax, "Min Max Count");
         }
 
     }

@@ -18,17 +18,28 @@ namespace UnityFishSimulation
     {
         protected override string FileName => "Swimming";
 
-        public FishActivationDataSwimming(float2 interval, int sampleNum = 15) : base(interval, sampleNum) { }
+        protected override bool UseMirror => this.useMirror;
+        protected bool useMirror = false;
+
+        public FishActivationDataSwimming(float2 interval, int sampleNum = 15, bool useMirror = false) : base(interval, sampleNum) 
+        {
+            this.useMirror = useMirror;
+        }
 
         protected override List<(Spring.Type, Spring.Side)> GetSpringTypes()
         {
-            return new List<(Spring.Type, Spring.Side)>()
+
+            var ret = new List<(Spring.Type, Spring.Side)>()
             {
                 (Spring.Type.MuscleMiddle, Spring.Side.Left),
-                (Spring.Type.MuscleMiddle, Spring.Side.Right),
                 (Spring.Type.MuscleBack, Spring.Side.Left),
-                (Spring.Type.MuscleBack, Spring.Side.Right),
             };
+            if (this.UseMirror)
+            {
+                ret.Add((Spring.Type.MuscleMiddle, Spring.Side.Right));
+                ret.Add((Spring.Type.MuscleBack, Spring.Side.Right));
+            }
+            return ret;
         }
     }
 
@@ -37,17 +48,27 @@ namespace UnityFishSimulation
     {
         protected override string FileName => "TurnLeft";
 
-        public FishActivationDataTurnLeft(float2 interval, int sampleNum = 15) : base(interval, sampleNum) { }
+        protected override bool UseMirror => this.useMirror;
+        protected bool useMirror = false;
+
+        public FishActivationDataTurnLeft(float2 interval, int sampleNum = 15, bool useMirror = false) : base(interval, sampleNum) 
+        {
+            this.useMirror = useMirror;
+        }
 
         protected override List<(Spring.Type, Spring.Side)> GetSpringTypes()
         {
-            return new List<(Spring.Type, Spring.Side)>()
+            var ret = new List<(Spring.Type, Spring.Side)>()
             {
                 (Spring.Type.MuscleFront, Spring.Side.Left),
-                (Spring.Type.MuscleFront, Spring.Side.Right),
                 (Spring.Type.MuscleMiddle, Spring.Side.Left),
-                (Spring.Type.MuscleMiddle, Spring.Side.Right),
             };
+            if (this.UseMirror)
+            {
+                ret.Add((Spring.Type.MuscleFront, Spring.Side.Right));
+                ret.Add((Spring.Type.MuscleMiddle, Spring.Side.Right));
+            }
+            return ret;
         }
     }
     [Serializable]
@@ -55,17 +76,27 @@ namespace UnityFishSimulation
     {
         protected override string FileName => "TurnRight";
 
-        public FishActivationDataTurnRight(float2 interval, int sampleNum = 15) : base(interval, sampleNum) { }
+        protected override bool UseMirror => this.useMirror;
+        protected bool useMirror = false;
+
+        public FishActivationDataTurnRight(float2 interval, int sampleNum = 15, bool useMirror = false) : base(interval, sampleNum) 
+        {
+            this.useMirror = useMirror;
+        }
 
         protected override List<(Spring.Type, Spring.Side)> GetSpringTypes()
         {
-            return new List<(Spring.Type, Spring.Side)>()
+            var ret = new List<(Spring.Type, Spring.Side)>()
             {
                 (Spring.Type.MuscleFront, Spring.Side.Left),
-                (Spring.Type.MuscleFront, Spring.Side.Right),
                 (Spring.Type.MuscleMiddle, Spring.Side.Left),
-                (Spring.Type.MuscleMiddle, Spring.Side.Right),
             };
+            if (this.UseMirror)
+            {
+                ret.Add((Spring.Type.MuscleFront, Spring.Side.Right));
+                ret.Add((Spring.Type.MuscleMiddle, Spring.Side.Right));
+            }
+            return ret;
         }
     }
     [Serializable]
@@ -74,8 +105,10 @@ namespace UnityFishSimulation
         public float offset = 0;
         public float amplitude = 1;
         public float frequency = 1;
+        public float phase = 0;
 
         public bool useFFT = true;
+        public bool useClamp = false;
 
     }
     [Serializable]
@@ -108,7 +141,7 @@ namespace UnityFishSimulation
             var ret = 0f;
             for (int i = 1; i < cosFunc.Count && count++ < level; ++i)
             {
-                if (math.abs(cosFunc[i].amplitude) <= 0.01f) continue;
+                // if (math.abs(cosFunc[i].amplitude) <= 0.01f) continue;
                 ret += cosFunc[i].Evaluate(x);
             }
             return ret;
@@ -151,7 +184,7 @@ namespace UnityFishSimulation
     [Serializable]
     public class ActivationData
     {
-        public X2FDiscreteFunction<float> DiscreteFunction { get => this.discreteFunction; set => this.discreteFunction = value; }
+        public X2FDiscreteFunction<float> DiscreteFunction => this.discreteFunction;
         public FFTData FFT => this.fftData;
         public TuningData Tuning => this.tuningData;
         protected X2FDiscreteFunction<float> discreteFunction;
@@ -164,26 +197,33 @@ namespace UnityFishSimulation
             var end = new Tuple<float, float>(interval.y, 0);
 
             this.discreteFunction = new X2FDiscreteFunction<float>(start, end, sampleNum);
-            this.fftData = new FFTData(this.discreteFunction);
+            this.fftData = new FFTData(this.DiscreteFunction);
             this.tuningData = new TuningData();
 
             this.fftData.GenerateFFTData();
         }
         public float Evaluate(float x)
         {
-            var value = x * this.tuningData.frequency;
-            var ret = this.tuningData.useFFT ? this.fftData.Evaluate(value) : this.discreteFunction.Evaluate(value);
+            var value = x * this.Tuning.frequency + this.Tuning.phase;
+            var emode = this.Tuning.useClamp?X2FDiscreteFunction<float>.EvaluateMode.Clamp:X2FDiscreteFunction<float>.EvaluateMode.Repeat;
+            var ret = this.Tuning.useFFT ? this.FFT.Evaluate(value) : this.DiscreteFunction.Evaluate(value, emode);
             return this.ApplyTuning(ret);
         }
 
+        public void FromAnimationCurve(AnimationCurve curve)
+        {
+            this.discreteFunction = new X2FDiscreteFunction<float>(curve);
+            this.fftData = new FFTData(this.DiscreteFunction);
+            this.fftData.GenerateFFTData();
+        }
         public List<AnimationCurve> ToAnimationCurves()
         {
-            return new List<AnimationCurve>() { this.discreteFunction.ToAnimationCurve(), this.fftData.ToAnimationCurve() };
+            return new List<AnimationCurve>() { this.DiscreteFunction.ToAnimationCurve(), this.FFT.ToAnimationCurve() };
         }
 
         public void RandomData()
         {
-            this.discreteFunction.RandomValues(-1,1);
+            this.discreteFunction.RandomValues(-1, 1);
             this.fftData.GenerateFFTData();
         }
 
@@ -224,6 +264,7 @@ namespace UnityFishSimulation
         static Dictionary<string, FishActivationData> data = new Dictionary<string, FishActivationData>();
         public static FishActivationData Load(string fileName = "Swimming")
         {
+            fileName = System.IO.Path.GetFileNameWithoutExtension(fileName);
             fileName += ".ad";
             if (data.ContainsKey(fileName)) return data[fileName];
             var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
@@ -243,12 +284,13 @@ namespace UnityFishSimulation
 
         protected abstract List<(Spring.Type, Spring.Side)> GetSpringTypes();
         protected abstract string FileName { get; }
+        protected abstract bool UseMirror { get; }
 
         //public Dictionary<Spring.Type, X2FDiscreteFunction<float>> Activations { get => this.activations; }
 
         public ActivationData this[Spring.Type type, Spring.Side side]
         {
-            get=>this.activations[(type, side)];
+            get => this.activations[(type, side)];
         }
 
         public FishActivationData() : this(new float2(0, 1)) { }
@@ -299,14 +341,13 @@ namespace UnityFishSimulation
                 {
                     //r.Activation = 1 - act;
                     //r.Activation = 1 - cos;// 
-                    r.Activation = rvalue;
-                    // r.Activation = 1 - lvalue;
+                    r.Activation = this.UseMirror ? 1 - lvalue : rvalue;
                 }
             }
         }
         public void RandomActivation()
         {
-            foreach(var a in this.activations)
+            foreach (var a in this.activations)
             {
                 a.Value.RandomData();
             }
