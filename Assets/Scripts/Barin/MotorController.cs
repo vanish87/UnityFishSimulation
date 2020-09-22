@@ -119,8 +119,8 @@ namespace UnityFishSimulation
         {
             var parameterVec = new Vector<float2>(4);
             parameterVec[3] = new float2(0, 0);
-            parameterVec[2] = new float2(0.2f, 0.2f);
-            parameterVec[1] = new float2(0.5f, 0.5f);
+            parameterVec[2] = new float2(0.2f, 0.3f);
+            parameterVec[1] = new float2(0.4f, 0.5f);
             parameterVec[0] = new float2(1.0f, 1.0f);
             this.angleParameterMap = new DiscreteFunction<float, float2>(0, math.PI / 2, parameterVec);
         }
@@ -157,8 +157,8 @@ namespace UnityFishSimulation
         {
             var parameterVec = new Vector<float2>(4);
             parameterVec[0] = new float2(0, 0);
-            parameterVec[1] = new float2(0.2f, 0.2f);
-            parameterVec[2] = new float2(0.5f, 0.5f);
+            parameterVec[1] = new float2(0.2f, 0.3f);
+            parameterVec[2] = new float2(0.4f, 0.5f);
             parameterVec[3] = new float2(1.0f, 1.0f);
             this.angleParameterMap = new DiscreteFunction<float, float2>(math.PI / 2, math.PI, parameterVec);
 
@@ -194,13 +194,18 @@ namespace UnityFishSimulation
         [SerializeField] protected float leftFin;
         [SerializeField] protected float rightFin;
 
-        public void UpdateBalance(float3 left)
+        public void UpdateBalance(float3 left, float3 normal)
         {
             left = math.normalize(left);
-            var angleWithWorld = math.acos(math.dot(left, this.worldUp));
+            normal = math.normalize(normal);
+            
+            var leftUpNormal = math.normalize(math.cross(this.worldUp, left));
+            var projection = normal - (math.dot(normal, leftUpNormal) * leftUpNormal);
+            projection = math.normalize(projection);
+            var angleWithWorld = math.acos(math.dot(projection, this.worldUp));
 
-            this.leftFin = math.PI/2 - angleWithWorld;
-            this.rightFin = -leftFin;
+            this.leftFin = math.PI / 2 - angleWithWorld;
+            this.rightFin = math.PI / 2 + angleWithWorld;
         }
     }
 }
