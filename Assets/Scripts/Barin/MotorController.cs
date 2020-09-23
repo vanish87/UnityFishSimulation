@@ -118,10 +118,10 @@ namespace UnityFishSimulation
         public TurnLeftMC() : base()
         {
             var parameterVec = new Vector<float2>(4);
-            parameterVec[3] = new float2(0, 0);
-            parameterVec[2] = new float2(0.2f, 0.3f);
-            parameterVec[1] = new float2(0.4f, 0.5f);
             parameterVec[0] = new float2(1.0f, 1.0f);
+            parameterVec[1] = new float2(0.4f, 0.5f);
+            parameterVec[2] = new float2(0.2f, 0.3f);
+            parameterVec[3] = new float2(0, 0);
             this.angleParameterMap = new DiscreteFunction<float, float2>(0, math.PI / 2, parameterVec);
         }
         public void UpdateAngle(float angle)
@@ -196,16 +196,17 @@ namespace UnityFishSimulation
 
         public void UpdateBalance(float3 left, float3 normal)
         {
-            left = math.normalize(left);
-            normal = math.normalize(normal);
-            
-            var leftUpNormal = math.normalize(math.cross(this.worldUp, left));
-            var projection = normal - (math.dot(normal, leftUpNormal) * leftUpNormal);
-            projection = math.normalize(projection);
-            var angleWithWorld = math.acos(math.dot(projection, this.worldUp));
+            var angleWithWorld = math.acos(Tool.CosAngle(left, this.worldUp));
 
-            this.leftFin = math.PI / 2 - angleWithWorld;
-            this.rightFin = math.PI / 2 + angleWithWorld;
+            // Debug.Log(angleWithWorld);
+
+            var t = angleWithWorld / math.PI;
+
+            var up = math.PI * 3 / 4;
+            var down = math.PI / 4;
+
+            this.leftFin = math.lerp(down, up, t);
+            this.rightFin = math.lerp(up, down, t);
         }
     }
 }

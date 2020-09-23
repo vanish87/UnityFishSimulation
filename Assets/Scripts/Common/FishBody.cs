@@ -18,10 +18,13 @@ namespace UnityFishSimulation
             var parent = this.transform.parent;
             if (parent != null)
             {
-                parent.transform.position = this.modelData.GeometryCenter;
-                parent.transform.forward = this.modelData.Left;
-                parent.transform.right = this.modelData.Direction;
-                // this.transform.up = this.modelData.Normal;
+                var up = this.modelData.Normal;
+                var forward = this.modelData.Direction;
+                var left = UnityTools.Math.Tool.Normal(up, forward);
+                // parent.transform.position = this.modelData.GeometryCenter;
+                // parent.transform.up = up;
+                // parent.transform.forward = left;
+                // parent.transform.right = UnityTools.Math.Tool.Normal(left, up);
             }
         }
         protected void OnDrawGizmos()

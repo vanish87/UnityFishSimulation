@@ -344,8 +344,8 @@ MonoBehaviour:
   debug: 0
   size: 1
   angle: 360
-  Vr: 100
-  Or: 150
+  Vr: 1000
+  Or: 1500
   Dr: 5
 --- !u!114 &596394948
 MonoBehaviour:
@@ -386,6 +386,8 @@ MonoBehaviour:
         value: 0
       - type: 5
         value: 0
+    target:
+      self: {fileID: 0}
 --- !u!1 &603707321
 GameObject:
   m_ObjectHideFlags: 0
@@ -411,7 +413,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 603707321}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 73.8, y: 0, z: 30.699999}
+  m_LocalPosition: {x: 73.8, y: 0, z: 0.6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 1620535970}
@@ -1188,8 +1190,18 @@ MonoBehaviour:
     rightFin: 0
   currentMC: 
   swim:
+    parameters:
+    - amplitude: 1
+      frequency: 1
+    - amplitude: 1
+      frequency: 1
     speed: 1
   turn:
+    parameters:
+    - amplitude: 1
+      frequency: 1
+    - amplitude: 1
+      frequency: 1
     angle: 0
   runtimeList: []
   runtimeMuscleList: []

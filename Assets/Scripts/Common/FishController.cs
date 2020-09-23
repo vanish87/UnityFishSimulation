@@ -115,7 +115,7 @@ namespace UnityFishSimulation
         }
         protected void UpdateFocusser(FishSimulator.Delta delta)
         {
-            this.perception.FocusserUpdate(this.brain.CurrentIntension, this.brain.CurrentDesire);
+            this.perception.FocusserUpdate(this.brain.CurrentIntension, this.brain.CurrentDesire, this.body);
         }
         protected void UpdateMotorController(FishSimulator.Delta delta)
         {
@@ -144,7 +144,7 @@ namespace UnityFishSimulation
         {
             //MC logical
             var ret = new BehaviorRoutine();
-            ret.Init(intension, perception);
+            ret.Init(intension, perception, this.body);
 
             return ret;
         }
@@ -177,8 +177,8 @@ namespace UnityFishSimulation
                 var lfin = this.body.modelData.FishPectoralFins[0];
                 var rfin = this.body.modelData.FishPectoralFins[1];
 
-                lfin.Angle = math.lerp(lfin.Angle, math.PI/2 + this.balanceMC.lFin, 0.3f);
-                rfin.Angle = math.lerp(rfin.Angle, math.PI/2 + this.balanceMC.rFin, 0.3f);
+                lfin.Angle = math.lerp(lfin.Angle, this.balanceMC.lFin, 0.1f);
+                rfin.Angle = math.lerp(rfin.Angle, this.balanceMC.rFin, 0.3f);
             }
 
             //Debug data

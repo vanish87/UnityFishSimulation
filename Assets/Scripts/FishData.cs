@@ -71,7 +71,17 @@ namespace UnityFishSimulation
 
         public Matrix4x4 WordToLocalMatrix { get => Matrix4x4.TRS(this.GeometryCenter, Quaternion.FromToRotation(new float3(1, 0, 0), this.Direction), new float3(1, 1, 1)); }
 
-        public float3 Left { get => math.normalize(math.cross(this.Direction, this.Normal)); }
+        // public float3 Left { get => math.normalize(math.cross(this.Direction, this.Normal)); }
+        public float3 Left
+        {
+            get
+            {
+                var list = this.FishGraph.Nodes.ToList();
+                var min = (list[5].Position + list[8].Position) / 2;
+                var y = min - this.GeometryCenter;
+                return math.normalize(y);
+            }
+        }
 
         public float3 Direction { get => math.normalize(this.Head.Position - this.GeometryCenter); }
         //0, 
@@ -409,8 +419,8 @@ namespace UnityFishSimulation
             var nodes = fish.FishGraph.Nodes.ToList();
             var leftList = new List<MassPoint>();
             var rightList = new List<MassPoint>();
-            var left = new int[] { 1, 4 };//, 5, 8 , 9, 12 };
-            var right = new int[] { 2, 3 };//, 6, 7 }, 10, 11 };
+            var left = new int[] { 1, 4 , 5, 8 , 9, 12 };
+            var right = new int[] { 2, 3 , 6, 7 , 10, 11 };
             for (var i = 1; i <= 12; ++i)
             {
                 if(left.Contains(i)) leftList.Add(nodes[i]);
@@ -429,6 +439,10 @@ namespace UnityFishSimulation
             fish.fishGeoNodes.Add(nodeList[6]);
             fish.fishGeoNodes.Add(nodeList[7]);
             fish.fishGeoNodes.Add(nodeList[8]);
+            // fish.fishGeoNodes.Add(nodeList[9]);
+            // fish.fishGeoNodes.Add(nodeList[10]);
+            // fish.fishGeoNodes.Add(nodeList[11]);
+            // fish.fishGeoNodes.Add(nodeList[12]);
         }
     }
 
@@ -544,14 +558,16 @@ namespace UnityFishSimulation
             this.nodeList.AddRange(nodes);
 
             this.normal = new float3(0, 1, 0);
-            this.area = 5;
+            this.area = 1;
         }
         public void ApplyFinForce(float3 velocity, float3 left, float3 forward)
         {
             this.normal = Quaternion.AngleAxis(this.Angle * Mathf.Rad2Deg, left) * forward;
             this.normal = math.normalize(this.normal);
 
-            this.force = -this.area * math.clamp(math.dot(velocity, this.normal),-1,1) * this.normal;
+            var projection = UnityTools.Math.Tool.ProjectionOnVector(velocity, forward);
+
+            this.force = -this.area * math.dot(projection, this.normal) * this.normal;
 
             var force = this.force / this.nodeList.Count;
             foreach (var node in this.nodeList)
@@ -572,7 +588,7 @@ namespace UnityFishSimulation
                 }
                 center /= this.nodeList.Count;
 
-                Gizmos.DrawLine(center, center + this.force);
+                Gizmos.DrawLine(center, center + this.force*10);
                 //Gizmos.DrawLine(center, center + this.normal * 20);
             }
         }

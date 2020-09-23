@@ -5,6 +5,7 @@ using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityTools.Debuging.EditorTool;
+using UnityTools.Math;
 
 namespace UnityFishSimulation
 {
@@ -28,7 +29,7 @@ namespace UnityFishSimulation
         [SerializeField] public SensorObject closestDangerObj = null;
 
         public SensorData()
-        {
+        {            
             foreach (ObjectType t in Enum.GetValues(typeof(ObjectType)))
             {
                 this.currentSensorableObjects.Add(t, new List<SensorObject>());
@@ -102,11 +103,9 @@ namespace UnityFishSimulation
             this.sensorData.Clear();
             this.visionSensor.Scan(this.sensorData);
         }
-        public void FocusserUpdate(Intension intension, Desire desire)
+        public void FocusserUpdate(Intension intension, Desire desire, FishBody body)
         {
-            this.focusser.Update(intension, this, desire);
-            //TODO refine this
-            this.focusser.target.self = this.gameObject;
+            this.focusser.Update(intension, this, desire, body);
         }
         public Focusser GetFocuser(){return this.focusser;}
 
@@ -127,7 +126,6 @@ namespace UnityFishSimulation
         public class Target
         {
             public SensorObject obj;
-            public GameObject self;
         }
         [System.Serializable]
         //Intension->MotorPreference->Focus
@@ -175,7 +173,7 @@ namespace UnityFishSimulation
         public Target target = new Target();
         //active focus and filter out none-important sensor data
         //save to Target
-        public void Update(Intension intension, Perception perception, Desire desire)
+        public void Update(Intension intension, Perception perception, Desire desire, FishBody body)
         {
             //get desires
             //avoid, fear, eat, mate
@@ -184,21 +182,21 @@ namespace UnityFishSimulation
             var foods = perception.GetSensorData().GetVisiable(ObjectType.Food);
             foreach (var f in foods)
             {
-                var mtype = this.GetMotorPreferenceType(f.obj, perception);
+                var mtype = this.GetMotorPreferenceType(f.obj, perception, body);
                 this.motorPreference[mtype].value += desire.eat;
             }
 
             var obstacles = perception.GetSensorData().GetVisiable(ObjectType.Obstacle);
             foreach(var o in obstacles)
             {
-                var mtype = this.GetMotorPreferenceType(o.obj, perception);
+                var mtype = this.GetMotorPreferenceType(o.obj, perception, body);
                 this.motorPreference[mtype].value -= desire.avoid;
             }
             //TODO add predator value
 
             var targetType = intension.IntensionType == Intension.Type.Eat ? ObjectType.Food : ObjectType.Obstacle;
 
-            var sameSide = foods.Where(o=>this.GetMotorPreferenceType(o.obj, perception) == this.motorPreference.MaxValue.type);
+            var sameSide = foods.Where(o=>this.GetMotorPreferenceType(o.obj, perception, body) == this.motorPreference.MaxValue.type);
             this.target.obj = sameSide.OrderBy(o=>o.distance).FirstOrDefault();
             //if intension == avoid
 
@@ -207,13 +205,12 @@ namespace UnityFishSimulation
         }
 
         //TODO return multiple motorpreference
-        protected MotorPreference.Type GetMotorPreferenceType(ISensorableObject obj, Perception perception)
+        protected MotorPreference.Type GetMotorPreferenceType(ISensorableObject obj, Perception perception, FishBody body)
         {
-            var org = perception.transform.position;
-            var dir = perception.transform.forward; // Note forward is blue axis
+            var org = body.modelData.GeometryCenter;
+            var dir = body.modelData.Left;
 
-            var target = math.normalize(obj.Position - new float3(org));
-            var angle = math.dot(target, dir);
+            var angle = Tool.CosAngle(dir, obj.Position - org);
             //>0 left
             //<0 right
             var forwardAngle = new float2(math.cos(math.radians(90-25)), math.cos(math.radians(90+25)));
