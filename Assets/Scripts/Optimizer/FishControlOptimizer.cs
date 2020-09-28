@@ -110,10 +110,10 @@ namespace UnityFishSimulation
                             case OptType.TurnRight: this.activationData = new FishActivationDataTurnRight(para.interval, para.sampleNum); break;
                         }
 
-                        this.Generate(this);
+                        this.Generate(null);
                     }
 
-                    public float Evaluate(SimulatedAnnealing.IState state)
+                    public float Evaluate(Vector<float> input)
                     {
                         if (this.isDirty)
                         {
@@ -145,7 +145,7 @@ namespace UnityFishSimulation
 
                         return this.LatestE;
                     }
-                    public SimulatedAnnealing.IState Generate(SimulatedAnnealing.IState x)
+                    public Vector<float> Generate(Vector<float> input)
                     {
                         this.isDirty = true;
                         this.activationData.RandomActivation();
@@ -164,7 +164,7 @@ namespace UnityFishSimulation
                                 func[i] = Mathf.Clamp01(func[i] + rand * 0.5f);
                             }*/
                         }
-                        return x;
+                        return input;
                     }
                 }
 

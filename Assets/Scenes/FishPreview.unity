@@ -151,17 +151,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d2256d7c43041443a14b36043d67268, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activationFileName: TurnRight.ad
-  mode: 1
+  activationFileName: Swimming.ad
+  mode: 2
   stepMode: 1
   activation: 0
   timeInterval:
     x: 0
-    y: 1.57
+    y: 10
   sampleNum: 15
   fft: 0
   loop: 1
   curves: []
+  runtimeList: []
 --- !u!4 &785274050
 Transform:
   m_ObjectHideFlags: 0

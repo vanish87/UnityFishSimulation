@@ -133,7 +133,7 @@ namespace UnityFishSimulation
         {
             this.sourceFunction = activation;
         }
-        public float Evaluate(float x, int level = 2, bool sort = false)
+        public float Evaluate(float x, int level = 1, bool sort = false)
         {
             var cosFunc = sort ? this.cosData.OrderByDescending(a => a.amplitude).ToList() : this.cosData;
 

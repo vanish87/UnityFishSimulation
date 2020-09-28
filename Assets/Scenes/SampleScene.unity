@@ -386,8 +386,6 @@ MonoBehaviour:
         value: 0
       - type: 5
         value: 0
-    target:
-      self: {fileID: 0}
 --- !u!1 &603707321
 GameObject:
   m_ObjectHideFlags: 0

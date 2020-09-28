@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityTools.Algorithm;
@@ -30,18 +31,20 @@ namespace UnityFishSimulation
         [SerializeField] protected bool fft = false;
         [SerializeField] protected bool loop = true;
         [SerializeField] protected List<AnimationCurve> curves = new List<AnimationCurve>();
+        [SerializeField] protected List<MassPoint> runtimeList;
 
 
         protected FishActivationData activationData;
         protected FishBody fish;
         protected FishSimulatorOffline sim;
         protected FishSimulatorOffline.Problem problem;
+        protected IterationDelta delta;
 
         protected void InitActivations()
         {
             if (this.mode == ControlMode.Random || this.mode == ControlMode.Manual)
             {
-                this.activationData = new FishActivationDataSwimming(this.timeInterval, this.sampleNum);
+                this.activationData = new FishActivationDataSwimming(this.timeInterval, this.sampleNum, true);
                 this.activationData.RandomActivation();
             }
             else
@@ -110,12 +113,14 @@ namespace UnityFishSimulation
         {
             this.fish = this.GetComponent<FishBody>();
             this.fish.Init();
+            this.runtimeList = this.fish.modelData.FishGraph.Nodes.ToList();
+
 
             this.InitActivations();
             this.UpdateAnimationCurves();
             this.problem = new FishSimulatorOffline.Problem(this.fish.modelData, this.activationData);
-            var dt = new IterationDelta();
-            this.sim = new FishSimulatorOffline(problem, dt);
+            this.delta = new IterationDelta();
+            this.sim = new FishSimulatorOffline(problem, this.delta);
             this.sim.TryToRun();
         }
 
@@ -138,6 +143,12 @@ namespace UnityFishSimulation
                 }
             }
 
+            this.sim.RunMode = this.stepMode;
+            if(Input.GetKey(KeyCode.Space) && this.stepMode == IterationAlgorithmMode.PerStep)
+            {
+                this.sim.TryToRun();
+            }
+
             foreach(var a in this.activationData.ToActivationList())
             {
                 a.Tuning.useFFT = this.fft;
@@ -154,6 +165,7 @@ namespace UnityFishSimulation
             if (Input.GetKey(KeyCode.R))
             {
                 this.fish.Init();
+                this.runtimeList = this.fish.modelData.FishGraph.Nodes.ToList();
                 this.problem.UpdateData(this.fish.modelData, this.activationData);    
                 this.sim.Restart();
             }
