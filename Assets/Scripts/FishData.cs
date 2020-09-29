@@ -118,20 +118,20 @@ namespace UnityFishSimulation
 
                 using (new GizmosScope(Color.red, Matrix4x4.identity))
                 {
-                    Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Direction * localAxisScale);
+                    // Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Direction * localAxisScale);
                     Gizmos.DrawLine(this.Head.Position, this.Head.Position + this.Velocity);
 
-                    Gizmos.DrawSphere(this.GeometryCenter, 50 * Unit.WorldMMToUnityUnit);
+                    // Gizmos.DrawSphere(this.GeometryCenter, 50 * Unit.WorldMMToUnityUnit);
                 }
 
                 using (new GizmosScope(Color.green, Matrix4x4.identity))
                 {
-                    Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Normal * localAxisScale);
+                    // Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Normal * localAxisScale);
                 }
 
                 using (new GizmosScope(Color.blue, Matrix4x4.identity))
                 {
-                    Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Left * localAxisScale);
+                    // Gizmos.DrawLine(this.GeometryCenter, this.GeometryCenter + this.Left * localAxisScale);
                 }
             }
         }
@@ -248,10 +248,10 @@ namespace UnityFishSimulation
         public static void InitNormals(FishModelData fish)
         {
             
-            AddNormalFace(fish, 0, 1, 2);
-            AddNormalFace(fish, 0, 2, 3);
-            AddNormalFace(fish, 0, 3, 4);
-            AddNormalFace(fish, 0, 4, 1);
+            // AddNormalFace(fish, 0, 1, 2);
+            // AddNormalFace(fish, 0, 2, 3);
+            // AddNormalFace(fish, 0, 3, 4);
+            // AddNormalFace(fish, 0, 4, 1);
 
             AddNormalFace(fish, 1, 5, 6, 2);
             AddNormalFace(fish, 2, 6, 7, 3);
@@ -534,11 +534,6 @@ namespace UnityFishSimulation
             //if (type == Spring.Type.MuscleBack) this.lc = this.lr * 0.3f;
         }
 
-
-        public override string ToString()
-        {
-            return "1";
-        }
     }
 
     [System.Serializable]
