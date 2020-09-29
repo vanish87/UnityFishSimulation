@@ -252,7 +252,6 @@ namespace UnityFishSimulation
         [SerializeField] protected string fileName = "SAProblem.data";
 
         protected IterationAlgorithm algorithm;
-        protected IProblem p;
         protected ISolution sol;
 
 
@@ -263,10 +262,9 @@ namespace UnityFishSimulation
 
         protected void StartSA(SAProblem sa)
         {
-            p = sa;
             this.sa = sa;
             var d = new Delta();
-            this.algorithm = new SimulatedAnnealing(p, d);
+            this.algorithm = new SimulatedAnnealing(this.sa, d);
             this.algorithm.TryToRun();
 
             /*this.algorithm.PerStep((p, s, dt, a) =>
@@ -294,7 +292,7 @@ namespace UnityFishSimulation
             }
             else
             {
-                var problem = (this.p) as SAProblem;
+                var problem = this.sa;
                 return (problem.Current as SAProblem.ActivationState.Data).ActivationData;
             }
         }
@@ -364,7 +362,7 @@ namespace UnityFishSimulation
 
             if (Input.GetKeyDown(KeyCode.S))
             {
-                var problem = (this.p) as SAProblem;
+                var problem = this.sa;
                 if (problem != null)
                 {
                     this.SaveData(problem, this.fileName);
@@ -372,13 +370,13 @@ namespace UnityFishSimulation
             }
             if (Input.GetKeyDown(KeyCode.D))
             {
-                var problem = (this.p) as SAProblem;
+                var problem = this.sa;
                 var act = (problem.Current as SAProblem.ActivationState.Data).ActivationData;
                 FishActivationData.Save(act);
             }
             if (Input.GetKeyDown(KeyCode.L))
             {
-                var problem = (this.p) as SAProblem;
+                var problem = this.sa;
                 if (problem != null)
                 {
                     var data = this.LoadData(this.fileName);
@@ -386,8 +384,8 @@ namespace UnityFishSimulation
                     {
                         this.algorithm.Dispose();
 
-                        this.p = data;
-                        this.algorithm = new SimulatedAnnealing(this.p, new Delta());
+                        this.sa = data;
+                        this.algorithm = new SimulatedAnnealing(this.sa, new Delta());
 
                         this.algorithm.Start((p, s, dt, a) =>
                         {
@@ -424,7 +422,7 @@ namespace UnityFishSimulation
         public KeyCode OpenKey => KeyCode.Q;
         public void OnDrawGUI()
         {
-            var p = this.p as SAProblem;
+            var p = this.sa;
             var e = (p.Current as SAProblem.ActivationState.Data).LatestE;
             var minMax = new UnityEngine.Vector4(p.MinMaxCount.x, p.MinMaxCount.y, p.MinMaxCount.z, p.MinMaxCount.w);
             ConfigureGUI.OnGUI(ref p.temperature, "Current Temp");
