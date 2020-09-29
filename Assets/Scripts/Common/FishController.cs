@@ -178,7 +178,7 @@ namespace UnityFishSimulation
                 var rfin = this.body.modelData.FishPectoralFins[1];
 
                 lfin.Angle = math.lerp(lfin.Angle, this.balanceMC.lFin, 0.1f);
-                rfin.Angle = math.lerp(rfin.Angle, this.balanceMC.rFin, 0.3f);
+                rfin.Angle = math.lerp(rfin.Angle, this.balanceMC.rFin, 0.1f);
             }
 
             //Debug data
