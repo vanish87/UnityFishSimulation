@@ -152,7 +152,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   activationFileName: Swimming.ad
-  mode: 2
+  mode: 0
   stepMode: 1
   activation: 0
   timeInterval:

@@ -165,7 +165,7 @@ namespace UnityFishSimulation
 
                     data.ApplyActivation(delta.local, type, this.body.modelData, parameter);
                 }
-                if(delta.local > data.Interval.y)
+                if(data.IsDone)
                 {
                     delta.local = 0;
                     this.muscleMCs.RemoveFirst();

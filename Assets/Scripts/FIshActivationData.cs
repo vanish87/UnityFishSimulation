@@ -276,9 +276,12 @@ namespace UnityFishSimulation
         public float2 Interval => this.interval;
         public int SampleNum => this.sampleNum;
         public int FunctionCount => this.activations.Count;
+        public bool IsDone => this.isDone;
 
         protected float2 interval;
         protected int sampleNum;
+
+        protected bool isDone = false;
 
         protected Dictionary<(Spring.Type, Spring.Side), ActivationData> activations = new Dictionary<(Spring.Type, Spring.Side), ActivationData>();
 
@@ -344,6 +347,8 @@ namespace UnityFishSimulation
                     r.Activation = this.UseMirror ? 1 - lvalue : rvalue;
                 }
             }
+
+            this.isDone = t * f > this.Interval.y;
         }
         public void RandomActivation()
         {

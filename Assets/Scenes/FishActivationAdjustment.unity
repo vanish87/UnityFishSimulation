@@ -166,7 +166,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   type: 0
-  fft: 0
+  fft: 1
   loop: 1
   curves: []
   tunings: []
