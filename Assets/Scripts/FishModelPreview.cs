@@ -40,11 +40,20 @@ namespace UnityFishSimulation
         protected FishSimulatorOffline.Problem problem;
         protected IterationDelta delta;
 
+        public bool useJellyFish = false;
+
         protected void InitActivations()
         {
             if (this.mode == ControlMode.Random || this.mode == ControlMode.Manual)
             {
-                this.activationData = new FishActivationDataSwimming(this.timeInterval, this.sampleNum, true);
+                if (this.useJellyFish)
+                {
+                    this.activationData = new FishActivationDataJellyfish(this.timeInterval, this.sampleNum, true);
+                }
+                else
+                {
+                    this.activationData = new FishActivationDataSwimming(this.timeInterval, this.sampleNum, true);
+                }
                 this.activationData.RandomActivation();
             }
             else
@@ -128,12 +137,13 @@ namespace UnityFishSimulation
         {
             if (this.mode == ControlMode.Manual)
             {
-                var types = new List<Spring.Type>() { Spring.Type.MuscleMiddle, Spring.Type.MuscleBack };
+                var types = new List<Spring.Type>() { Spring.Type.MuscleMiddle, Spring.Type.MuscleBack};
                 foreach (var t in types)
                 {
-                    var a = this.activationData[t, Spring.Side.Left];
-                    a.Tuning.useFFT = false;
-                    a.DiscreteFunction.ResetValues(this.activation);
+                    this.activationData.SetActivationValue(t, Spring.Side.Left, this.activation);
+                    this.activationData.SetActivationValue(t, Spring.Side.None, this.activation);
+                    // a.Tuning.useFFT = false;
+                    // a.DiscreteFunction.ResetValues(this.activation);
                     // a = this.activationData[t, Spring.Side.Right];
                     // a.Tuning.useFFT = false;
                     // var ra = (this.activation + 1) * 0.5f;

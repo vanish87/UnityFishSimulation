@@ -99,6 +99,27 @@ namespace UnityFishSimulation
             return ret;
         }
     }
+    public class FishActivationDataJellyfish : FishActivationData
+    {
+        protected override string FileName => "JellyfishSwimming";
+
+        protected override bool UseMirror => this.useMirror;
+        protected bool useMirror = false;
+
+        public FishActivationDataJellyfish(float2 interval, int sampleNum = 15, bool useMirror = false) : base(interval, sampleNum) 
+        {
+            this.useMirror = useMirror;
+        }
+
+        protected override List<(Spring.Type, Spring.Side)> GetSpringTypes()
+        {
+            var ret = new List<(Spring.Type, Spring.Side)>()
+            {
+                (Spring.Type.MuscleMiddle, Spring.Side.None),
+            };
+            return ret;
+        }
+    }
     [Serializable]
     public class TuningData
     {
@@ -325,6 +346,7 @@ namespace UnityFishSimulation
             var muscle = model.GetSpringByType(new List<Spring.Type>() { type });
             var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
             var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
+            var muscleNone = muscle.Where(s=>s.SpringSide == Spring.Side.None);
 
             var f = muscleMC == null ? 1 : muscleMC.frequency;
             var a = muscleMC == null ? 1 : muscleMC.amplitude;
@@ -346,9 +368,27 @@ namespace UnityFishSimulation
                     //r.Activation = 1 - cos;// 
                     r.Activation = this.UseMirror ? 1 - lvalue : rvalue;
                 }
+
+                var nvalue = this.Evaluate(t * f, (type, Spring.Side.None)) * a;
+                nvalue = (nvalue + 1) * 0.5f;
+                foreach(var n in muscleNone)
+                {
+                    n.Activation = nvalue;
+                }
             }
 
             this.isDone = t * f > this.Interval.y;
+        }
+
+        public void SetActivationValue(Spring.Type t, Spring.Side s, float value)
+        {
+            if(this.HasType((t,s)))
+            {
+                var a = this.activations[(t, s)];
+                a.Tuning.useFFT = false;
+                a.DiscreteFunction.ResetValues(value);
+            }
+
         }
         public void RandomActivation()
         {

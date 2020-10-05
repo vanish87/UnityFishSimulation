@@ -2,16 +2,18 @@
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityTools.Attributes;
 
 namespace UnityFishSimulation
 {
     public class FishBody : MonoBehaviour
     {
+        [SerializeField, FileNamePopup("*.model")] protected string modelFileName = "fish";
         public FishModelData modelData;
 
         public void Init()
         {
-            this.modelData = GeometryFunctions.Load();
+            this.modelData = GeometryFunctions.Load(this.modelFileName);
         }
         protected void Update()
         {

@@ -140,7 +140,7 @@ namespace UnityFishSimulation
     public static class GeometryFunctions
     {
         private static object lockObj = new object();
-        public static FishModelData fish;
+        public static FishModelData FishInstance;
         public static Dictionary<Spring.Type, Color> springColorMap = new Dictionary<Spring.Type, Color>()
         {
             {Spring.Type.Cross , Color.gray },
@@ -162,24 +162,158 @@ namespace UnityFishSimulation
                 try
                 {
                     var path = System.IO.Path.Combine(Application.streamingAssetsPath, fileName);
-                    if (fish == null) LogTool.Log("Loaded " + path);
-                    fish = fish ?? FileTool.Read<FishModelData>(path);
+                    if (FishInstance == null) LogTool.Log("Loaded " + path);
+                    FishInstance = FishInstance ?? FileTool.Read<FishModelData>(path);
                 }
                 catch (System.Exception e)
                 {
                     LogTool.Log(e.ToString(), LogLevel.Error);
                 }
 
-                if (fish == null)
+                if (FishInstance == null)
                 {
-                    fish = new FishModelData();
-                    InitNewFishModel(fish);
-                    Save(fish, fileName);
+                    FishInstance = new FishModelData();
+                    InitNewFishModel(FishInstance);
+                    Save(FishInstance, fileName);
                 }
 
-                return fish.DeepCopy();
+                return FishInstance.DeepCopy();
             }
         }
+
+        public static void InitNewJellyFishMode(FishModelData data)
+        {
+            var n =  14;
+            data.FishGraph = new GraphAdj<MassPoint, Spring>(n);
+            InitJFNodes(data);
+            InitJFSprings(data);
+            InitJFNormals(data);
+
+            InitJFGeoNodes(data);
+
+
+        }
+
+        public static void InitJFNodes(FishModelData data)
+        {
+            var m1 = 1.1f;
+            var m2 = 6.6f;
+            var m3 = 11.0f;
+            var m4 = 0.165f;
+
+            var n = data.FishGraph.Nodes.ToList();
+
+            SetNode(n[0], new float3(0, 0, 0), m1);
+            SetNode(n[13], new float3(0, -5, 0), m1);
+
+
+            var h = -5;
+            var r = 5;
+            var ln = 6;
+            for (int i = 0; i < ln; ++i)
+            {
+                var ai = (i / (ln * 1f)) * (2 * math.PI);
+                SetNode(n[1 + i], new float3(math.cos(ai) * r, h, math.sin(ai) * r), m2);
+            }
+
+            h = -10;
+            r = 10;
+            for (int i = 0; i < ln; ++i)
+            {
+                var ai = (i / (ln * 1f)) * (2 * math.PI);
+                SetNode(n[7 + i], new float3(math.cos(ai) * r, h, math.sin(ai) * r), m2);
+            }
+        }
+
+        public static void InitJFSprings(FishModelData data)
+        {
+            AddSpring(data, 0, 1, Spring.Type.Normal);
+            AddSpring(data, 0, 2, Spring.Type.Normal);
+            AddSpring(data, 0, 3, Spring.Type.Normal);
+            AddSpring(data, 0, 4, Spring.Type.Normal);
+            AddSpring(data, 0, 5, Spring.Type.Normal);
+            AddSpring(data, 0, 6, Spring.Type.Normal);
+
+            AddSpring(data, 1, 7, Spring.Type.Normal);
+            AddSpring(data, 2, 8, Spring.Type.Normal);
+            AddSpring(data, 3, 9, Spring.Type.Normal);
+            AddSpring(data, 4, 10, Spring.Type.Normal);
+            AddSpring(data, 5, 11, Spring.Type.Normal);
+            AddSpring(data, 6, 12, Spring.Type.Normal);
+
+            AddSpring(data, 1, 2, Spring.Type.Cross);
+            AddSpring(data, 2, 3, Spring.Type.Cross);
+            AddSpring(data, 3, 4, Spring.Type.Cross);
+            AddSpring(data, 4, 5, Spring.Type.Cross);
+            AddSpring(data, 5, 6, Spring.Type.Cross);
+            AddSpring(data, 6, 1, Spring.Type.Cross);
+
+            AddSpring(data, 7, 13, Spring.Type.Normal);
+            AddSpring(data, 8, 13, Spring.Type.Normal);
+            AddSpring(data, 9, 13, Spring.Type.Normal);
+            AddSpring(data, 10, 13, Spring.Type.Normal);
+            AddSpring(data, 11, 13, Spring.Type.Normal);
+            AddSpring(data, 12, 13, Spring.Type.Normal);
+            // AddSpring(data, 7, 8, Spring.Type.Normal);
+            // AddSpring(data, 8, 9, Spring.Type.Normal);
+            // AddSpring(data, 9, 10, Spring.Type.Normal);
+            // AddSpring(data, 10, 11, Spring.Type.Normal);
+            // AddSpring(data, 11, 12, Spring.Type.Normal);
+            // AddSpring(data, 12, 7, Spring.Type.Normal);
+
+            AddSpring(data, 1, 13, Spring.Type.MuscleMiddle);
+            AddSpring(data, 2, 13, Spring.Type.MuscleMiddle);
+            AddSpring(data, 3, 13, Spring.Type.MuscleMiddle);
+            AddSpring(data, 4, 13, Spring.Type.MuscleMiddle);
+            AddSpring(data, 5, 13, Spring.Type.MuscleMiddle);
+            AddSpring(data, 6, 13, Spring.Type.MuscleMiddle);
+            
+            // AddSpring(data, 1, 13, Spring.Type.Cross);
+            // AddSpring(data, 2, 13, Spring.Type.Cross);
+            // AddSpring(data, 3, 13, Spring.Type.Cross);
+            // AddSpring(data, 4, 13, Spring.Type.Cross);
+            // AddSpring(data, 5, 13, Spring.Type.Cross);
+            // AddSpring(data, 6, 13, Spring.Type.Cross);
+
+
+
+            AddSpring(data, 0, 13, Spring.Type.Cross);
+
+            // AddSpring(data, 1, 4, Spring.Type.MuscleMiddle);
+            // AddSpring(data, 2, 5, Spring.Type.MuscleMiddle);
+            // AddSpring(data, 3, 6, Spring.Type.MuscleMiddle);
+        }
+
+        public static void InitJFNormals(FishModelData data)
+        {
+            
+            AddNormalFace(data, 0, 2, 1);
+            AddNormalFace(data, 0, 3, 2);
+            AddNormalFace(data, 0, 4, 3);
+            AddNormalFace(data, 0, 5, 4);
+            AddNormalFace(data, 0, 6, 5);
+            AddNormalFace(data, 0, 1, 6);
+            
+            AddNormalFace(data, 13, 1, 2);
+            AddNormalFace(data, 13, 2, 3);
+            AddNormalFace(data, 13, 3, 4);
+            AddNormalFace(data, 13, 4, 5);
+            AddNormalFace(data, 13, 5, 6);
+            AddNormalFace(data, 13, 6, 1);
+            
+        }
+        public static void InitJFGeoNodes(FishModelData data)
+        {
+            var nodeList = data.FishGraph.Nodes.ToList();
+            data.fishGeoNodes.Clear();
+            data.fishGeoNodes.Add(nodeList[1]);
+            data.fishGeoNodes.Add(nodeList[2]);
+            data.fishGeoNodes.Add(nodeList[3]);
+            data.fishGeoNodes.Add(nodeList[4]);
+            data.fishGeoNodes.Add(nodeList[5]);
+            data.fishGeoNodes.Add(nodeList[6]);
+        }
+
 
         public static void InitNewFishModel(FishModelData fish)
         {
@@ -622,7 +756,7 @@ namespace UnityFishSimulation
             var mid = (p1 + p2 + p3 + p4) / this.nodeList.Count;
             using (new GizmosScope(Color.yellow, Matrix4x4.identity))
             {
-                //Gizmos.DrawLine(mid, mid + this.Normal * length);
+                // Gizmos.DrawLine(mid, mid + this.Normal * length);
             }
             using (new GizmosScope(Color.gray, Matrix4x4.identity))
             {

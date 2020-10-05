@@ -163,6 +163,7 @@ MonoBehaviour:
   loop: 1
   curves: []
   runtimeList: []
+  useJellyFish: 0
 --- !u!4 &785274050
 Transform:
   m_ObjectHideFlags: 0
@@ -189,6 +190,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2561bd0319c38144cbc60697f824b9fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  modelFileName: fish.model
   modelData:
     damping: 0.05
     normalFace: []
