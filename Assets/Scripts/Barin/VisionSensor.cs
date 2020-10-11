@@ -34,8 +34,6 @@ namespace UnityFishSimulation
 
         public void Scan(SensorData sensorData)
         {
-            sensorData.Clear();
-
             var from = this as ISensorableObject;
             var o = new float3(this.Position);
             var dir = new float3(this.transform.forward);

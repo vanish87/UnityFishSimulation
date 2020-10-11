@@ -11,18 +11,31 @@ using UnityTools.Math;
 
 namespace UnityFishSimulation
 {
+    [Serializable]
     public class FishLogger
     {
+        [Serializable]
         public class Data
         {
-            internal protected DiscreteFunction<float, float3> trajectory;
-            internal protected DiscreteFunction<float, float3> velocity;
+            internal protected DiscreteFunction<float, float3> trajectory = new DiscreteFunction<float, float3>();
+            internal protected DiscreteFunction<float, float3> velocity = new DiscreteFunction<float, float3>();
+            internal protected DiscreteFunction<float, float3> direction = new DiscreteFunction<float, float3>();
             internal protected int currentIndex;
         }
 
-        public void Log()
+        public Data LogData=>this.logData;
+        protected Data logData = new Data();
+        protected float sampleInterval = 0.5f;
+        protected float current = 0;
+        public void Log(FishModelData bodyModel, float current)
         {
-
+            if(current > this.current)
+            {
+                this.logData.trajectory.Append(current, bodyModel.Head.Position);
+                this.logData.velocity.Append(current, bodyModel.Velocity);
+                this.logData.direction.Append(current, bodyModel.Direction);
+                this.current += this.sampleInterval;
+            }
         }
     }
     
@@ -56,10 +69,12 @@ namespace UnityFishSimulation
         {
             protected const float dt = 0.055f;
             public float current;
+            public float local;
             public float deltaTime;
             public void Reset()
             {
                 this.current = 0;
+                this.local = 0;
             }
 
             public void Step()

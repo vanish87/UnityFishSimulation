@@ -15,13 +15,6 @@ namespace UnityFishSimulation
             Euler,
             Matrix,
         }
-        public enum ControlMode
-        {
-            Learning,
-            Normal,
-        }
-
-
 
         public Environment Runtime { get; set; }
         public int Order => (int)FishLauncher.LauncherOrder.Default;
@@ -31,16 +24,7 @@ namespace UnityFishSimulation
             {
                 case FishLauncher.LaunchEvent.Init:
                     {
-                        this.body = this.GetComponentInChildren<FishBody>();
-                        this.body.Init();
-
-                        this.brain = this.GetComponentInChildren<FishBrain>();
-                        this.brain.Init();
-
-                        this.logger = this.logger ?? new FishLogger();
-
-                        this.Reset();
-                        FishSimulatorRunner.Instance.Controller.AddController(this);
+                        this.Init();
                     }
                     break;
                 default:
@@ -50,12 +34,22 @@ namespace UnityFishSimulation
 
         protected FishBody body;
         protected FishBrain brain;
+        protected Perception perception;
+
+        protected LinkedList<MuscleMC> muscleMCs = new LinkedList<MuscleMC>();
+        [SerializeField] protected BalanceMC balanceMC; 
+
+        [SerializeField] protected string currentMC;
+        [SerializeField] protected SwimMC swim;
+        [SerializeField] protected TurnLeftMC turn;
 
         protected SolverType solverType = SolverType.Euler;
         protected IAlgorithm solver;
 
+        protected FishSimulator.Delta localDelta;
         protected FishLogger logger;
 
+        [SerializeField] protected FishActivationData customData;
         [SerializeField] public List<MassPoint> runtimeList;
         [SerializeField] public List<Spring> runtimeMuscleList;
         [SerializeField] public List<Spring> runtimeSpringList;
@@ -65,6 +59,24 @@ namespace UnityFishSimulation
 
         // public bool IsDone { get; set; }
 
+        public void Init()
+        {
+            this.body = this.GetComponentInChildren<FishBody>();
+            this.body.Init();
+
+            this.brain = this.GetComponentInChildren<FishBrain>();
+            this.brain.Init();
+
+            this.perception = this.GetComponentInChildren<Perception>();
+            this.perception.Init();
+
+            this.logger = this.logger ?? new FishLogger();
+            this.localDelta = this.localDelta ?? new FishSimulator.Delta();
+
+            this.Reset();
+            FishSimulatorRunner.Instance.Controller.AddController(this);
+
+        }
         public void Reset()
         {
             //TODO move load to Body
@@ -78,6 +90,8 @@ namespace UnityFishSimulation
             {
                 this.solver = new FishMatrixSolver();
             }
+            this.localDelta.Reset();
+            this.muscleMCs.Clear();
 
             this.runtimeList = this.body.modelData.FishGraph.Nodes.ToList();
             this.runtimeSpringList = this.body.modelData.FishGraph.Edges.ToList();
@@ -91,57 +105,96 @@ namespace UnityFishSimulation
             this.runtimeFinList = this.body.modelData.FishPectoralFins;
         }
 
+        protected void UpdatePerception(FishSimulator.Delta delta)
+        {
+            this.perception.SensorUpdate(delta);
+        }
         protected void UpdateBrain(FishSimulator.Delta delta)
         {
-            this.brain.UpdateBrain(delta.deltaTime);
+            this.brain.UpdateBrain(delta, this.perception);
         }
+        protected void UpdateFocusser(FishSimulator.Delta delta)
+        {
+            this.perception.FocusserUpdate(this.brain.CurrentIntension, this.brain.CurrentDesire, this.body);
+        }
+        protected void UpdateMotorController(FishSimulator.Delta delta)
+        {
+            var behaviorRoutine = this.GenerateBehaviorRoutine(this.brain.CurrentIntension, this.perception);
 
+            foreach (var mc in behaviorRoutine.ToMC())
+            {
+                if(mc is MuscleMC)
+                {
+                    var mmc = mc as MuscleMC;
+                    if(this.muscleMCs.Count > 1)
+                    {
+                        this.muscleMCs.RemoveLast();
+                    }
+                    this.muscleMCs.AddLast(mmc);
+                }
+                if(mc is BalanceMC)
+                {
+                    this.balanceMC = mc as BalanceMC;
+                }
+            }
+
+            this.ApplyBehaviorRoutine(delta);
+        }
+        protected BehaviorRoutine GenerateBehaviorRoutine(Intension intension, Perception perception)
+        {
+            //MC logical
+            var ret = new BehaviorRoutine();
+            ret.Init(intension, perception, this.body);
+
+            return ret;
+        }
         protected void ApplyBehaviorRoutine(FishSimulator.Delta delta)
         {
-            var routine = this.brain.GetBehaviorRoutine();
+            var types = new List<Spring.Type>() { Spring.Type.MuscleFront, Spring.Type.MuscleMiddle, Spring.Type.MuscleBack };
 
-            foreach (var mc in routine.ToMC().Select(mc => mc as MuscleMC))
+            // foreach (var mc in this.muscleMCs)
+            var mc = this.muscleMCs.FirstOrDefault();
+            if(mc != null)
             {
                 var data = mc.ActivationData;
 
-                //get motor controller from brain
-                var types = new List<Spring.Type>() { Spring.Type.MuscleFront, Spring.Type.MuscleMiddle, Spring.Type.MuscleBack };
-
                 foreach (var type in types)
                 {
+                    //get motor controller from brain
                     var parameter = mc.GetParameter(type);
 
-                    var t = delta.current;
-                    var muscle = body.modelData.GetSpringByType(new List<Spring.Type>() { type });
-                    var muscleLeft = muscle.Where(s => s.SpringSide == Spring.Side.Left);
-                    var muscleRight = muscle.Where(s => s.SpringSide == Spring.Side.Right);
-
-
-                    if (data.HasType(type))
-                    {
-                        var tuning = data.Tuning.GetDataByType(type);
-                        var value = data.Evaluate(t * tuning.frequency * parameter.frequency, type, data.Tuning.useFFT);
-                        //value = data.Evaluate(t * tuning.frequency, type, false);
-                        var lvalue = this.ApplyTuning(tuning, value);
-                        var rvalue = this.ApplyTuning(tuning, 1 - value);
-
-                        foreach (var l in muscleLeft)
-                        {
-                            //l.Activation = act;
-                            //l.Activation = cos;// 
-                            l.Activation = lvalue;
-                        }
-                        foreach (var r in muscleRight)
-                        {
-                            //r.Activation = 1 - act;
-                            //r.Activation = 1 - cos;// 
-                            r.Activation = rvalue;
-                        }
-                    }
+                    data.ApplyActivation(delta.local, type, this.body.modelData, parameter);
+                }
+                if(data.IsDone)
+                {
+                    delta.local = 0;
+                    this.muscleMCs.RemoveFirst();
                 }
             }
-        }
 
+            if(this.balanceMC != null)
+            {
+                var lfin = this.body.modelData.FishPectoralFins[0];
+                var rfin = this.body.modelData.FishPectoralFins[1];
+
+                lfin.Angle = math.lerp(lfin.Angle, this.balanceMC.lFin, 0.1f);
+                rfin.Angle = math.lerp(rfin.Angle, this.balanceMC.rFin, 0.1f);
+            }
+
+            //Debug data
+            var fmc = this.muscleMCs.FirstOrDefault();
+            if(fmc != null)
+            {
+                if (fmc is SwimMC) this.swim = fmc as SwimMC;
+                if (fmc is TurnLeftMC) this.turn = fmc as TurnLeftMC;
+                this.currentMC = fmc.ToString();
+            }
+            else
+            {
+                this.currentMC = "None";
+            }
+        }
+        
         protected void UpdateBody(FishSimulator.Delta delta)
         {
             this.solver.Solve(new FishStructureProblem() { fish = body.modelData, dt = delta.deltaTime });
@@ -149,6 +202,15 @@ namespace UnityFishSimulation
 
         protected void UpdateSolution(FishSimulator.Delta delta, FishSimulator.Solution solution)
         {
+            // if (this.controlMode == ControlMode.Normal)
+            // {
+
+            // }
+            // else
+            // {
+            //     var data = this.customData.Interval;
+            //     this.IsDone = delta.current > data.y;
+            // }
             /*var data = this.brain.Current;
             this.IsDone = delta.current > data.Interval.y;
 */
@@ -163,23 +225,21 @@ namespace UnityFishSimulation
                 this.currentIndex++;
             }*/
 
-            this.logger.Log();
-        }
-        protected float ApplyTuning(TuningData.SpringToData data, float value)
-        {
-            value = math.clamp((value - 0.5f) * 2 * data.amplitude, -1, 1);
-            value = (value + 1) * 0.5f;
-            value += data.offset;
-            value = math.saturate(value);
-            return value;
+            this.logger.Log(this.body.modelData, delta.current);
         }
 
         public void MainUpdate(FishSimulator.Delta delta, FishSimulator.Solution solution)
         {
-            this.UpdateBrain(delta);
-            this.ApplyBehaviorRoutine(delta);
-            this.UpdateBody(delta);
-            this.UpdateSolution(delta, solution);
+            this.localDelta.current += delta.deltaTime;
+            this.localDelta.local += delta.deltaTime;
+            this.localDelta.deltaTime = delta.deltaTime;
+
+            this.UpdatePerception(this.localDelta);
+            this.UpdateBrain(this.localDelta);
+            this.UpdateFocusser(this.localDelta);
+            this.UpdateMotorController(this.localDelta);
+            this.UpdateBody(this.localDelta);
+            this.UpdateSolution(this.localDelta, solution);
         }
     }
 }

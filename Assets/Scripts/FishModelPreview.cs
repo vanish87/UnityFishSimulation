@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityTools.Algorithm;
+using UnityTools.Attributes;
 using UnityTools.Debuging.EditorTool;
 using UnityTools.Math;
 
@@ -15,103 +17,192 @@ namespace UnityFishSimulation
         {
             Manual,
             Activations,
+            Random,
+            CosSwim,
+            CosTrun,
         }
 
+        [SerializeField, FileNamePopup("*.ad")] protected string activationFileName = "Swimming";
         [SerializeField] protected ControlMode mode = ControlMode.Activations;
         [SerializeField] protected IterationAlgorithmMode stepMode = IterationAlgorithmMode.FullStep;
-        [SerializeField, Range(0, 1)] protected float activation = 0.5f;
+        [SerializeField, Range(-1, 1)] protected float activation = 0f;
         [SerializeField] protected float2 timeInterval = new float2(0, 20);
         [SerializeField] protected int sampleNum = 15;
+        [SerializeField] protected bool fft = false;
+        [SerializeField] protected bool loop = true;
         [SerializeField] protected List<AnimationCurve> curves = new List<AnimationCurve>();
-        [SerializeField] protected TuningData tuning;
+        [SerializeField] protected List<MassPoint> runtimeList;
 
-        [SerializeField] protected List<float3> traj = new List<float3>();
 
         protected FishActivationData activationData;
-        //protected Fish fish;
-        
+        protected FishBody fish;
+        protected FishSimulatorOffline sim;
+        protected FishSimulatorOffline.Problem problem;
+        protected IterationDelta delta;
+
+        public bool useJellyFish = false;
+
         protected void InitActivations()
         {
-            this.activationData = new FishActivationDataSwimming(this.timeInterval, this.sampleNum);
-
-            foreach (var fun in this.activationData.ToDiscreteFunctions())
+            if (this.mode == ControlMode.Random || this.mode == ControlMode.Manual)
             {
-                fun.RandomValues();
+                if (this.useJellyFish)
+                {
+                    this.activationData = new FishActivationDataJellyfish(this.timeInterval, this.sampleNum, true);
+                }
+                else
+                {
+                    this.activationData = new FishActivationDataSwimming(this.timeInterval, this.sampleNum, true);
+                }
+                this.activationData.RandomActivation();
             }
+            else
+            if (this.mode == ControlMode.Activations)
+            {
+                this.activationData = FishActivationData.Load(this.activationFileName);
+            }
+            else
+            if(this.mode == ControlMode.CosSwim)
+            {
+                this.activationData = new FishActivationDataSwimming(this.timeInterval, this.sampleNum, true);
+                var ml = this.activationData[Spring.Type.MuscleMiddle, Spring.Side.Left];
+                var bl = this.activationData[Spring.Type.MuscleBack, Spring.Side.Left];
+                for(var i = 0; i < this.sampleNum;++i)
+                {
+                    var x = i * 1f / (this.sampleNum - 1) * 2 * math.PI;
+                    ml.DiscreteFunction[i] = math.sin(x);
+                    bl.DiscreteFunction[i] = math.sin(x + math.PI);
+                }
+                ml.FFT.GenerateFFTData();
+                bl.FFT.GenerateFFTData();
+            }
+            else
+            if(this.mode == ControlMode.CosTrun)
+            {
+                var ar = FishActivationData.Load("TurnRight");
 
-            this.activationData.GenerateFFTData();
-            this.tuning = this.activationData.Tuning;
-            this.tuning.useFFT = false;
+                this.activationData = new FishActivationDataTurnLeft(this.timeInterval, this.sampleNum, true);
+                var fl = this.activationData[Spring.Type.MuscleFront, Spring.Side.Left];
+                var ml = this.activationData[Spring.Type.MuscleMiddle, Spring.Side.Left];
+                var afl = ar[Spring.Type.MuscleFront, Spring.Side.Left];
+                var aml = ar[Spring.Type.MuscleMiddle, Spring.Side.Left];
+                for(var i = 1; i < this.sampleNum;++i)
+                {
+                    var x = i * 1f / (this.sampleNum - 1) * 2 * math.PI;
+                    if(i < this.sampleNum/3)
+                    {
+                        // ml.DiscreteFunction[i] = -math.sin(x*3);
+                        // fl.DiscreteFunction[i] = -math.sin(x*3);
+                    }
+                    fl.DiscreteFunction[i] = -afl.DiscreteFunction[i];
+                    ml.DiscreteFunction[i] = -aml.DiscreteFunction[i];
+                }
+                ml.FFT.GenerateFFTData();
+                fl.FFT.GenerateFFTData();
+ 
+            }
         }
 
-        protected void UpdateAnimations()
+        protected void UpdateAnimationCurves()
         {
             this.curves = this.activationData.ToAnimationCurves();
         }
 
-        protected void UpdateAnimationsFunctions()
+        protected void UpdateActivationDataFromCurves()
         {
-            this.activationData[Spring.Type.MuscleMiddle] = new X2FDiscreteFunction<float>(this.curves[0]);
-            this.activationData[Spring.Type.MuscleBack] = new X2FDiscreteFunction<float>(this.curves[1]);
+            var act = this.activationData.ToActivationList();
+            for(var i = 0; i < this.curves.Count; i+=2)
+            {
+                act[i/2].FromAnimationCurve(this.curves[i]);
+            }
+            this.UpdateAnimationCurves();
         }
-
-        /*protected void UpdateTraj()
-        {
-            this.traj.Clear();
-            var sol = this.simulator.CurrentSolution as FishSimulator.Solution;
-            this.traj.AddRange(sol.trajactory.ToYVector());
-        }*/
 
         protected void Start()
         {
-            //this.fish = this.GetComponent<Fish>();
+            this.fish = this.GetComponent<FishBody>();
+            this.fish.Init();
+            this.runtimeList = this.fish.modelData.FishGraph.Nodes.ToList();
+
 
             this.InitActivations();
-            this.UpdateAnimations();
+            this.UpdateAnimationCurves();
+            this.problem = new FishSimulatorOffline.Problem(this.fish.modelData, this.activationData);
+            this.delta = new IterationDelta();
+            this.sim = new FishSimulatorOffline(problem, this.delta);
+            this.sim.TryToRun();
         }
 
         protected void Update()
         {
             if (this.mode == ControlMode.Manual)
             {
-                foreach (var a in this.activationData.ToDiscreteFunctions())
+                var types = new List<Spring.Type>() { Spring.Type.MuscleMiddle, Spring.Type.MuscleBack};
+                foreach (var t in types)
                 {
-                    foreach (var i in System.Linq.Enumerable.Range(0, this.sampleNum))
-                    {
-                        a[i] = this.activation;
-                    }
+                    this.activationData.SetActivationValue(t, Spring.Side.Left, this.activation);
+                    this.activationData.SetActivationValue(t, Spring.Side.None, this.activation);
+                    // a.Tuning.useFFT = false;
+                    // a.DiscreteFunction.ResetValues(this.activation);
+                    // a = this.activationData[t, Spring.Side.Right];
+                    // a.Tuning.useFFT = false;
+                    // var ra = (this.activation + 1) * 0.5f;
+                    // ra = 1 - ra;
+                    // ra = ra * 2 - 1;
+                    // a.DiscreteFunction.ResetValues(ra);
                 }
             }
 
-            /*
-
-            if (Input.GetKey(KeyCode.S))
+            this.sim.RunMode = this.stepMode;
+            if(Input.GetKey(KeyCode.Space) && this.stepMode == IterationAlgorithmMode.PerStep)
             {
-                fish.sim.TryToRun();
+                this.sim.TryToRun();
             }
-            if(Input.GetKeyDown(KeyCode.R))
-            {
-                this.UpdateAnimationsFunctions();
-                fish.sim.ResetAndRun();
-            }*/
 
-            if(Input.GetKeyDown(KeyCode.G))
+            foreach(var a in this.activationData.ToActivationList())
             {
-                foreach (var fun in this.activationData.ToDiscreteFunctions())
-                {
-                    fun.RandomValues();
-                }
-                this.UpdateAnimations();
+                a.Tuning.useFFT = this.fft;
+            }
+            if(this.loop && (this.sim.CurrentSolution as FishSimulatorOffline.Solution).IsDone)
+            {
+                this.sim.Restart();
+            }
+            if(Input.GetKeyDown(KeyCode.S))
+            {
+                FishActivationData.Save(this.activationData);
+            }
+
+            if (Input.GetKey(KeyCode.R))
+            {
+                this.fish.Init();
+                this.runtimeList = this.fish.modelData.FishGraph.Nodes.ToList();
+                this.problem.UpdateData(this.fish.modelData, this.activationData);    
+                this.sim.Restart();
+            }
+            if (Input.GetKeyDown(KeyCode.U))
+            {
+                this.UpdateActivationDataFromCurves();
+            }
+
+            if (Input.GetKeyDown(KeyCode.G))
+            {
+                this.activationData.RandomActivation();
+                this.UpdateAnimationCurves();
             }
         }
 
         protected void OnDrawGizmos()
         {
+            var sol = this.sim?.CurrentSolution as FishSimulatorOffline.Solution;
             using (new GizmosScope(Color.white, this.transform.localToWorldMatrix))
             {
-                for (var i = 0; i < this.traj.Count - 1; ++i)
+                if (sol != null)
                 {
-                    Gizmos.DrawLine(this.traj[i], this.traj[i + 1]);
+                    var logPos = sol.logger.LogData.trajectory.ToYVector();
+                    for (var i = 0; i < logPos.Size - 1; ++i)
+                    {
+                        Gizmos.DrawLine(logPos[i], logPos[i + 1]);
+                    }
                 }
             }
         }
