@@ -10,6 +10,8 @@ Include
   - Simulated Annealing
 - Fish brain implementation
 
-![](/gif/swim.gif)
+![](gif/swim.gif)
+
+![](gif/food.gif)
 
 ![](gif/overview.gif)
